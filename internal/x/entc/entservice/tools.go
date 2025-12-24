@@ -1,0 +1,117 @@
+package entservice
+
+import (
+	"entgo.io/ent/entc/gen"
+	"entgo.io/ent/schema/field"
+	"github.com/dave/jennifer/jen"
+)
+
+func chain(names ...string) *jen.Statement {
+	if len(names) == 0 {
+		return nil
+	}
+	st := jen.Id(names[0])
+	for _, name := range names[1:] {
+		st = st.Dot(name)
+	}
+	return st
+}
+
+func list(names ...string) *jen.Statement {
+	var st []jen.Code
+	for _, name := range names {
+		st = append(st, jen.Id(name))
+	}
+	return jen.List(st...)
+}
+
+// a,b,c = ...
+func assign(names ...string) *jen.Statement {
+	return list(names...).Op("=")
+}
+
+// a,b,c := ...
+func define(names ...string) *jen.Statement {
+	return list(names...).Op(":=")
+}
+
+// build args in separated lines
+func calls(args ...*jen.Statement) *jen.Statement {
+	st := jen.Op("(").Id("\n")
+	for _, arg := range args {
+		st = st.Add(arg.Op(",").Id("\n"))
+	}
+	return st.Op(")")
+}
+
+// convert original type to wrapped type
+// var s string
+// val := example.CustomString(s)
+func wrap(f *gen.Field, v *jen.Statement) *jen.Statement {
+	if f.Type.RType == nil || f.Type.RType.PkgPath == "" {
+		return v
+	}
+	return jen.Qual(f.Type.RType.PkgPath, f.Type.RType.Name).Call(v)
+}
+
+// convert wrapped type to original type
+// var s example.CustomString
+// val := string(s)
+func unwrap(f *gen.Field, v *jen.Statement) *jen.Statement {
+	if f.Type.RType == nil || f.Type.RType.PkgPath == "" {
+		return v
+	}
+	return jen.Id(f.Type.RType.Kind.String()).Call(v)
+}
+
+func entID(n *gen.Type, v *jen.Statement) *jen.Statement {
+	switch n.ID.Type.Type {
+	case field.TypeInt8:
+		return jen.Int8().Call(v)
+	case field.TypeInt16:
+		return jen.Int16().Call(v)
+	case field.TypeInt32:
+		return v
+	case field.TypeInt:
+		return jen.Int().Call(v)
+	case field.TypeInt64:
+		return v
+	case field.TypeUint8:
+		return jen.Uint8().Call(v)
+	case field.TypeUint16:
+		return jen.Uint16().Call(v)
+	case field.TypeUint32:
+		return v
+	case field.TypeUint:
+		return jen.Uint().Call(v)
+	case field.TypeUint64:
+		return v
+	case field.TypeString:
+		return v
+	case field.TypeUUID:
+		return v
+	default:
+		//panic(fmt.Errorf("unsupported ent id type: %s", n.ID.Type.Type))
+		return v
+	}
+}
+
+func protoID(n *gen.Type, v *jen.Statement) *jen.Statement {
+	switch n.ID.Type.Type {
+	case field.TypeInt8, field.TypeInt16, field.TypeInt32:
+		return jen.Int32().Call(v)
+	case field.TypeInt, field.TypeInt64:
+		return jen.Int64().Call(v)
+	case field.TypeUint8, field.TypeUint32:
+		return jen.Uint32().Call(v)
+	case field.TypeUint, field.TypeUint64:
+		return jen.Uint64().Call(v)
+	case field.TypeString:
+		return v
+	case field.TypeUUID:
+		return v.Dot("String").Call()
+	default:
+		//panic(fmt.Errorf("unsupported ent id type: %s", n.ID.Type.Type))
+		return v
+	}
+}
