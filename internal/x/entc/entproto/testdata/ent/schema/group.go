@@ -35,6 +35,9 @@ func (Group) Edges() []ent.Edge {
 
 func (Group) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		entproto.API(entproto.WithAPIPattern("/v1")),
+		entproto.API(
+			entproto.WithAPIPattern("/v1"),
+			entproto.WithPaginatorStyle(entproto.InfinitePaginator),
+		),
 	}
 }

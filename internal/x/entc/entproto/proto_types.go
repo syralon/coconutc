@@ -61,7 +61,8 @@ var (
 		// field.TypeOther:   nil,
 	}
 
-	TypePaginator = protobuilder.FieldTypeImportedMessage((&cocofield.Paginator{}).ProtoReflect().Descriptor())
+	TypeClassicalPaginator = protobuilder.FieldTypeImportedMessage((&cocofield.ClassicalPaginator{}).ProtoReflect().Descriptor())
+	TypeInfinitePaginator  = protobuilder.FieldTypeImportedMessage((&cocofield.InfinitePaginator{}).ProtoReflect().Descriptor())
 )
 
 type typeMapping map[field.Type]*protobuilder.FieldType
@@ -92,4 +93,11 @@ func MustNewField(name string, field *gen.Field, mapping TypeMapping) *protobuil
 		panic(err)
 	}
 	return fi
+}
+
+func PaginatorType(style entproto.PaginatorStyle) *protobuilder.FieldType {
+	if style == entproto.InfinitePaginator {
+		return TypeInfinitePaginator
+	}
+	return TypeClassicalPaginator
 }

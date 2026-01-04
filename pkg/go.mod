@@ -8,7 +8,6 @@ require (
 	entgo.io/ent v0.14.5
 	github.com/google/gnostic v0.7.1
 	github.com/iancoleman/strcase v0.3.0
-	github.com/stretchr/testify v1.11.1
 	google.golang.org/genproto/googleapis/api v0.0.0-20251213004720-97cd9d5aeac2
 )
 

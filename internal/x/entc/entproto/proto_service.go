@@ -102,7 +102,7 @@ func (b *ServiceBuilder) messages(ctx *Context, file *protobuilder.FileBuilder, 
 		AddField(protobuilder.NewField("desc", protobuilder.FieldTypeBool()))
 	optionsMessage.AddField(protobuilder.NewField("with_edge", protobuilder.FieldTypeBool()).SetProto3Optional(true))
 	optionsMessage.AddField(protobuilder.NewField("orders", protobuilder.FieldTypeMessage(orderMessage)).SetRepeated())
-	
+
 	err = NewMessageBuildHelper(
 		WithTypeMapping(EntityTypeMapping),
 		WithForceOptional(true),
@@ -176,15 +176,20 @@ func (b *ServiceBuilder) methodEdges(ctx *Context, file *protobuilder.FileBuilde
 				AddField(MustNewField(strcase.ToSnake(edge.Type.Name)+"_id", edge.Type.ID, EntityTypeMapping))
 			response.AddField(protobuilder.NewField("data", protobuilder.FieldTypeMessage(data)))
 		} else {
+			apiOpts, err := entproto.GetAPIOptions(edge.Type.Annotations)
+			if err != nil {
+				return err
+			}
+			paginator := PaginatorType(apiOpts.PaginatorStyle)
 			optionsMessage := ctx.NewMessage(fmt.Sprintf("%sOptions", edge.Type.Name))
 			order := ctx.NewMessage(fmt.Sprintf("List%sOrder", edge.Type.Name))
 			request.
 				AddField(MustNewField("id", node.ID, EntityTypeMapping)).
-				AddField(protobuilder.NewField("paginator", TypePaginator))
+				AddField(protobuilder.NewField("paginator", paginator))
 			request.
 				AddField(protobuilder.NewField("options", protobuilder.FieldTypeMessage(optionsMessage))).
 				AddField(protobuilder.NewField("orders", protobuilder.FieldTypeMessage(order)).SetRepeated())
-			response.AddField(protobuilder.NewField("paginator", TypePaginator))
+			response.AddField(protobuilder.NewField("paginator", paginator))
 			response.AddField(protobuilder.NewField("data", protobuilder.FieldTypeMessage(data)).SetRepeated())
 		}
 	}
@@ -229,11 +234,16 @@ func (b *ServiceBuilder) methodListMessages(ctx *Context, node *gen.Type, reques
 		return err
 	}
 
+	apiOpts, err := entproto.GetAPIOptions(node.Annotations)
+	if err != nil {
+		return err
+	}
+	paginator := PaginatorType(apiOpts.PaginatorStyle)
 	request.
 		AddField(protobuilder.NewField("options", protobuilder.FieldTypeMessage(opts))).
-		AddField(protobuilder.NewField("paginator", TypePaginator))
+		AddField(protobuilder.NewField("paginator", paginator))
 	response.
-		AddField(protobuilder.NewField("paginator", TypePaginator)).
+		AddField(protobuilder.NewField("paginator", paginator)).
 		AddField(protobuilder.NewField("data", protobuilder.FieldTypeMessage(data)).SetRepeated())
 	return nil
 }

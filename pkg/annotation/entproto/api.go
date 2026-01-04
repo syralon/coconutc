@@ -57,9 +57,10 @@ func (a APIMethod) Rule(prefix string) (*googleapi.HttpRule, error) {
 }
 
 type APIOptions struct {
-	Pattern     string
-	Method      APIMethod
-	DisableEdge bool
+	Pattern        string
+	Method         APIMethod
+	DisableEdge    bool
+	PaginatorStyle PaginatorStyle
 }
 
 type apiAnnotation struct {
@@ -88,6 +89,12 @@ func WithAPIMethods(methods ...APIMethod) func(a *apiAnnotation) {
 func WithAPIDisableEdge(disable bool) func(a *apiAnnotation) {
 	return func(a *apiAnnotation) {
 		a.DisableEdge = disable
+	}
+}
+
+func WithPaginatorStyle(style PaginatorStyle) func(a *apiAnnotation) {
+	return func(a *apiAnnotation) {
+		a.PaginatorStyle = style
 	}
 }
 
