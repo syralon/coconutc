@@ -54,6 +54,20 @@ func wrap(f *gen.Field, v *jen.Statement) *jen.Statement {
 	return jen.Qual(f.Type.RType.PkgPath, f.Type.RType.Name).Call(v)
 }
 
+func ifErr() *jen.Statement {
+	return jen.If(jen.Id("err").Op("!=").Id("nil")).Block(
+		jen.Return(jen.Id("nil"), jen.Id("err")),
+	)
+}
+
+func ctxType() *jen.Statement {
+	return jen.Qual(pkgContext, "Context")
+}
+
+func ctxVar() *jen.Statement {
+	return jen.Id("ctx").Add(ctxType())
+}
+
 // convert wrapped type to original type
 // var s example.CustomString
 // val := string(s)
@@ -114,4 +128,27 @@ func protoID(n *gen.Type, v *jen.Statement) *jen.Statement {
 		//panic(fmt.Errorf("unsupported ent id type: %s", n.ID.Type.Type))
 		return v
 	}
+}
+
+func messageName(method, name string) string {
+	n := nextCapital(method, 2)
+	if n > 0 {
+		return method[:n] + name + method[n:]
+	}
+	return method + name
+}
+
+func nextCapital(s string, n int) int {
+	if n < 1 {
+		n = 1
+	}
+	for i, c := range s {
+		if c >= 'A' && c <= 'Z' {
+			n--
+			if n == 0 {
+				return i
+			}
+		}
+	}
+	return -1
 }
