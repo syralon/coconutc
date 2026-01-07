@@ -7,7 +7,7 @@ import (
 
 	"entgo.io/ent/entc"
 	"entgo.io/ent/entc/gen"
-	"github.com/syralon/coconutc/internal/x/entc/entproto"
+	"github.com/syralon/coconutc/internal/c/entc/entproto"
 )
 
 var target string
