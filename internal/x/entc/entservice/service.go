@@ -43,11 +43,21 @@ type serviceBuilder struct {
 
 func (b *serviceBuilder) build(_ context.Context) error {
 	b.structs()
-	b.get()
-	b.list()
-	b.create()
-	b.update()
-	b.delete()
+	for _, method := range b.APIOptions.Method.Methods() {
+		switch method {
+		case entproto.GET:
+			b.get()
+		case entproto.LIST:
+			b.list()
+		case entproto.CREATE:
+			b.create()
+		case entproto.UPDATE:
+			b.update()
+		case entproto.DELETE:
+			b.delete()
+		default:
+		}
+	}
 	b.set()
 	b.edges()
 	return nil
@@ -75,6 +85,16 @@ func (b *serviceBuilder) request(op, method string) *jen.Statement {
 func (b *serviceBuilder) response(op, method string) *jen.Statement {
 	name := messageName(method, b.node.Name) + "Response"
 	return jen.Op(op).Qual(b.ProtoPackage, name)
+}
+
+func (b *serviceBuilder) listResponse(node *gen.Type) []jen.Code {
+	return []jen.Code{
+		jen.Id("Data").Op(":").Qual(pkgXSlices, "Trans").Call(
+			jen.Id("data"),
+			jen.Qual(b.repositoryPackage, fmt.Sprintf("%sToProto", node.Name)),
+		).Op(","),
+		jen.Id("Paginator").Op(":").Id("paginator").Op(","),
+	}
 }
 
 func (b *serviceBuilder) fn(method string, vars *jen.Statement, args []jen.Code, responses []jen.Code) {
@@ -122,13 +142,7 @@ func (b *serviceBuilder) list() {
 			jen.Id("request").Dot("GetOptions").Call(),
 			jen.Id("request").Dot("GetPaginator").Call(),
 		},
-		[]jen.Code{
-			jen.Id("Data").Op(":").Qual(pkgXSlices, "Trans").Call(
-				jen.Id("data"),
-				jen.Qual(b.repositoryPackage, fmt.Sprintf("%sToProto", b.node.Name)),
-			).Op(","),
-			jen.Id("Paginator").Op(":").Id("paginator").Op(","),
-		},
+		b.listResponse(b.node),
 	)
 }
 
@@ -232,13 +246,7 @@ func (b *serviceBuilder) edges() {
 					jen.Id("request").Dot("GetOptions").Call(),
 					jen.Id("request").Dot("GetPaginator").Call(),
 				},
-				[]jen.Code{
-					jen.Id("Data").Op(":").Qual(pkgXSlices, "Trans").Call(
-						jen.Id("data"),
-						jen.Qual(b.repositoryPackage, fmt.Sprintf("%sToProto", edge.Type.Name)),
-					).Op(","),
-					jen.Id("Paginator").Op(":").Id("paginator").Op(","),
-				},
+				b.listResponse(edge.Type),
 			)
 		}
 	}
