@@ -1,0 +1,38 @@
+package command
+
+import (
+	"errors"
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+	"github.com/syralon/coconutc/internal/tools/text"
+)
+
+type options struct {
+	target    string
+	output    string
+	overwrite bool
+	verbose   bool
+
+	module string
+}
+
+func (o *options) register(cmd *cobra.Command) {
+	cmd.PersistentFlags().StringVar(&o.target, "target", "./ent/schema", "The ent target directory.")
+	cmd.PersistentFlags().StringVarP(&o.output, "output", "o", ".", "The output directory.")
+	cmd.PersistentFlags().BoolVar(&o.overwrite, "overwrite", false, "overwrite generated files.")
+	cmd.PersistentFlags().BoolVar(&o.verbose, "verbose", false, "verbose output.")
+}
+
+func (o *options) parse() error {
+	var err error
+	o.module, err = text.Module(".")
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("%w, use 'go mod init' to create a new mod", err)
+		}
+		return fmt.Errorf("parse mod file on error: %w", err)
+	}
+	return nil
+}

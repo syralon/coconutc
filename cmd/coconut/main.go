@@ -1,37 +1,28 @@
 package main
 
 import (
-	"context"
-	"flag"
-	"os/exec"
+	"fmt"
+	"os"
 
-	"entgo.io/ent/entc"
-	"entgo.io/ent/entc/gen"
-	"github.com/syralon/coconutc/internal/c/entc/entproto"
+	"github.com/spf13/cobra"
+	"github.com/syralon/coconutc/internal/command"
 )
 
-var target string
-var verbose bool
-
-func init() {
-	flag.StringVar(&target, "target", "./ent/schema", "")
-	flag.BoolVar(&verbose, "v", false, "")
-	flag.Parse()
-}
-
 func main() {
-	ctx := context.Background()
-	cfg := &gen.Config{}
-	graph, err := entc.LoadGraph(target, cfg)
-	if err != nil {
-		panic(err)
+	cmd := &cobra.Command{
+		Use:           "entc-gen",
+		Long:          "A service generator base on ent(https://entgo.io/).\nHomepage: https://github.com/syralon/coconutc",
+		SilenceErrors: true,
+		SilenceUsage:  true,
 	}
-	generator, err := entproto.NewGenerator(entproto.WithOutput("."), entproto.WithVerbose(verbose))
-	if err != nil {
-		panic(err)
+	cmd.AddCommand(command.Ent()...)
+	cmd.AddCommand(
+		command.Proto(),
+		command.Service(),
+		command.Run(),
+		command.New(),
+	)
+	if err := cmd.Execute(); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "%s", err.Error())
 	}
-	if err = generator.Generate(ctx, graph); err != nil {
-		panic(err)
-	}
-	_ = exec.Command("buf", "format", "-w").Run()
 }

@@ -12,6 +12,7 @@ require (
 	github.com/google/gnostic v0.7.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/jhump/protoreflect/v2 v2.0.0-beta.2
+	github.com/spf13/cobra v1.7.0
 	github.com/syralon/coconut/proto v0.0.0-20251217102055-2837510c71e2
 	github.com/syralon/coconutc/pkg v0.0.0
 	golang.org/x/mod v0.31.0
@@ -28,7 +29,9 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.18.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/zclconf/go-cty v1.14.4 // indirect
 	github.com/zclconf/go-cty-yaml v1.1.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect

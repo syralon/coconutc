@@ -12,57 +12,51 @@ import (
 	"github.com/syralon/coconutc/pkg/annotation/entproto"
 )
 
-type GenerateOption func(generator *generateOptions)
+type GenerateOption func(generator *Generator)
 
 func WithOverwrite(overwrite bool) GenerateOption {
-	return func(generator *generateOptions) {
+	return func(generator *Generator) {
 		generator.overwrite = overwrite
 	}
 }
 
 func WithEntPath(entPath string) GenerateOption {
-	return func(generator *generateOptions) {
+	return func(generator *Generator) {
 		generator.entPath = entPath
 	}
 }
 
 func WithProtoPath(protoPath string) GenerateOption {
-	return func(generator *generateOptions) {
+	return func(generator *Generator) {
 		generator.protoPath = protoPath
 	}
 }
 
 func WithOutput(output string) GenerateOption {
-	return func(generator *generateOptions) {
+	return func(generator *Generator) {
 		generator.output = output
 	}
 }
 
-type generateOptions struct {
-	output string
-
-	overwrite bool
+type Generator struct {
+	output    string
 	entPath   string
 	protoPath string
-}
-
-type Generator struct {
-	generateOptions
+	overwrite bool
 
 	entPackage   string
 	protoPackage string
 	module       string
-	writers      []*writer
+
+	writers []*writer
 }
 
 func NewGenerator(opts ...GenerateOption) (*Generator, error) {
-	g := &Generator{generateOptions: generateOptions{entPath: "ent"}}
+	g := &Generator{entPath: "ent"}
 	for _, opt := range opts {
-		opt(&g.generateOptions)
+		opt(g)
 	}
-	if g.output == "" {
-		g.output = "."
-	}
+
 	if err := g.init(); err != nil {
 		return nil, err
 	}
@@ -70,6 +64,9 @@ func NewGenerator(opts ...GenerateOption) (*Generator, error) {
 }
 
 func (g *Generator) init() (err error) {
+	if g.output == "" {
+		g.output = "."
+	}
 	g.module, err = text.Module(g.output)
 	if err != nil {
 		return err
