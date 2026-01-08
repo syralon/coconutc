@@ -18,7 +18,7 @@ func TestServiceBuilder(t *testing.T) {
 	}
 
 	var ctx = context.Background()
-	builder := ServiceBuilder("service", "github.com/syralon/example/internal/repository")
+	builder := ServiceBuilder("github.com/syralon/example/internal/repository")
 	for _, node := range graph.Nodes {
 		apiOpts, err := entproto.GetAPIOptions(node.Annotations)
 		if err != nil {

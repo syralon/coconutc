@@ -21,6 +21,7 @@ func EntityBuilder(pkg string, withEdge bool) BuildFunc {
 			jen.Op("*").Qual(opts.EntPackage, node.Name),
 		)
 		toProtoFunc(file, node, opts, withEdge)
+		newEntityFunc(file, node, opts)
 		return file, nil
 	}
 }
@@ -66,8 +67,8 @@ func toProtoFunc(file *jen.File, node *gen.Type, opts *BuildOptions, withEdge bo
 			jen.Return(
 				jen.Op("&").Qual(opts.ProtoPackage, text.ProtoPascal(node.Name)).Block(fields...),
 			),
-		).
-		Line()
+		)
+	file.Line()
 
 	file.Func().
 		Id(fmt.Sprintf("%sToProto", node.Name)).
@@ -76,4 +77,16 @@ func toProtoFunc(file *jen.File, node *gen.Type, opts *BuildOptions, withEdge bo
 		Block(
 			jen.Id("data").Dot("ToProto").Call(),
 		)
+	file.Line()
+}
+
+func newEntityFunc(file *jen.File, node *gen.Type, opts *BuildOptions) {
+	defer file.Line()
+	
+	file.Func().Id(fmt.Sprintf("New%s", node.Name)).
+		Params(jen.Id("data").Op("*").Qual(opts.EntPackage, node.Name)).
+		Params(jen.Op("*").Id(node.Name)).
+		Block(jen.Return(
+			jen.Op("&").Id(node.Name).Block(jen.Id(node.Name).Op(":").Id("data").Op(",")),
+		))
 }

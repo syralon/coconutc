@@ -18,7 +18,7 @@ func TestRepositoryBuilder(t *testing.T) {
 	}
 
 	var ctx = context.Background()
-	builder := RepositoryBuilder("repository")
+	builder := RepositoryBuilder("data", "github.com/syralon/example/internal/domain/entity", "github.com/syralon/example/internal/infra/tx")
 	for _, node := range graph.Nodes {
 		apiOpts, err := entproto.GetAPIOptions(node.Annotations)
 		if err != nil {
@@ -47,7 +47,7 @@ func TestRepositoryInterfaceBuilder(t *testing.T) {
 	}
 
 	var ctx = context.Background()
-	builder := RepositoryInterfaceBuilder("repository")
+	builder := RepositoryInterfaceBuilder("repository", "github.com/syralon/example/internal/domain/entity")
 	for _, node := range graph.Nodes {
 		apiOpts, err := entproto.GetAPIOptions(node.Annotations)
 		if err != nil {
