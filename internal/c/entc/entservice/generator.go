@@ -95,7 +95,7 @@ func (g *Generator) init() (err error) {
 		func(n *gen.Type) string {
 			return path.Join(g.output, servicePath, strings.ToLower(n.Name)+"service", strings.ToLower(n.Name)) + ".go"
 		},
-		ServiceBuilder(path.Join(g.module, entityPath)),
+		ServiceBuilder(path.Join(g.module, repositoryPath), path.Join(g.module, entityPath)),
 	)
 	return nil
 }

@@ -6,7 +6,6 @@ import (
 	"context"
 
 	"{{.Module}}/ent"
-	"{{.Module}}/internal/domain/txn"
 	"github.com/syralon/coconut/proto/syralon/coconut/errors"
 )
 
@@ -60,5 +59,6 @@ func (rep *Repository) Tx(ctx context.Context, fn func(ctx context.Context) erro
 			err = errors.Join(err, tx.Rollback())
 		}
 	}()
+	ctx = withContext(ctx, tx.Client())
 	return fn(ctx)
 }

@@ -59,14 +59,12 @@ func (b *repositoryBuilder) structs() {
 	b.file.Type().Id(b.name).Struct(
 		jen.Id(repName),
 	)
-	b.file.Func().Id("New"+b.name).Params(
-		jen.Id("rep").Op("*").Qual(b.txPackage, "Repository"),
+	b.file.Func().Id("New" + b.name).Params(
+		jen.Id("repo").Op("*").Qual(b.txPackage, "Repository"),
 	).Op("*").Id(b.name).Block(
-		define("rep").Op("&").Id(b.name).Block(
-			//jen.Id("client").Op(":").Id("rep").Op(".").Id(b.node.Name).Call().Op(","),
-			jen.Id(repName).Op(":").Id("rep").Op(","),
-		),
-		jen.Return(jen.Id("rep")),
+		jen.Return(jen.Op("&").Id(b.name).Block(
+			jen.Id(repName).Op(":").Id("repo").Op(","),
+		)),
 	)
 }
 
@@ -100,7 +98,7 @@ func (b *repositoryBuilder) fnCreate() *jen.Statement {
 	return jen.Id("Create").
 		Params(
 			jen.Id("ctx").Qual(pkgContext, "Context"),
-			jen.Id("data").Op("*").Qual(b.ProtoPackage, b.node.Name+"Create"),
+			jen.Id("create").Op("*").Qual(b.ProtoPackage, b.node.Name+"Create"),
 		).
 		Call(jen.Op("*").Qual(b.entityPackage, b.node.Name), jen.Error())
 }
@@ -181,8 +179,8 @@ func (b *repositoryBuilder) set() {
 
 		b.fn(b.fnSet(v)).
 			Block(
-				define("err").Id("rep").Dot(b.node.Name).Call(jen.Id("ctx")).Dot("Update").Call().
-					Dot(fnName).Call(jen.Id("value")),
+				define("_", "err").Id("rep").Dot(b.node.Name).Call(jen.Id("ctx")).Dot("Update").Call().
+					Dot(fnName).Call(jen.Id("value")).Dot("Save").Call(jen.Id("ctx")),
 				jen.Return(jen.Err()),
 			).Line()
 	}
@@ -308,12 +306,12 @@ func (b *repositoryBuilder) list() {
 
 func (b *repositoryBuilder) create() {
 	defer b.file.Line()
-	create := define("create").Add(chain("rep", "client", "Create()"))
+	create := define("op").Id("rep").Dot(b.node.Name).Call(jen.Id("ctx")).Dot("Create()")
 	for _, v := range b.node.Fields {
 		if v.Name == "created_at" || v.Name == "updated_at" {
 			continue
 		}
-		val := jen.Id("data").Dot(fmt.Sprintf("Get%s()", text.ProtoPascal(v.Name)))
+		val := jen.Id("create").Dot(fmt.Sprintf("Get%s()", text.ProtoPascal(v.Name)))
 		if v.Type.Type == field.TypeTime {
 			val = val.Dot("AsTime()")
 		}
@@ -324,7 +322,7 @@ func (b *repositoryBuilder) create() {
 	b.fn(b.fnCreate()).
 		Block(
 			create,
-			define("data", "err").Id("create").Dot("Save").Call(jen.Id("ctx")),
+			define("data", "err").Id("op").Dot("Save").Call(jen.Id("ctx")),
 			ifErr(),
 			jen.Return(
 				jen.Qual(b.entityPackage, "New"+b.node.Name).Call(jen.Id("data")),
@@ -395,11 +393,11 @@ func (b *repositoryBuilder) paginator(style entproto.PaginatorStyle) *jen.Statem
 
 func (b *repositoryBuilder) classicalPaginator() *jen.Statement {
 	return jen.If(jen.Id("paginator").Op("!=").Nil()).Block(
-		define("total", "err").Id("query").Dot("Count").Call(),
+		define("total", "err").Id("query").Dot("Count").Call(jen.Id("ctx")),
 		jen.If(jen.Id("err").Op("!=").Nil()).Block(
 			jen.Return(jen.Nil(), jen.Id("paginator"), jen.Id("err")),
 		),
-		jen.Id("paginator").Dot("Total").Op("=").Id("total"),
+		jen.Id("paginator").Dot("Total").Op("=").Int64().Call(jen.Id("total")),
 		assign("query").Id("query").Dot("Order").Call(jen.Id("paginator").Dot("OrderSelector").Call()).
 			Dot("Offset").Call(jen.Int().Call(jen.Id("paginator").Dot("GetLimit()").Op("*").Call(jen.Id("paginator").Dot("GetPage()").Op("-").Id("1")))),
 	)

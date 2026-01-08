@@ -33,7 +33,7 @@ func NewGatewayServer(
 		)
 	} else {
 		srv.Register(
-            {{ range .Services }}gateway.ServerRegister[pb.{{.}}ServiceServer](service.{{.}}, pb.Register{{.}}ServiceHandlerServer),
+            {{ range .Services }}gateway.ServerRegister[pb.{{.}}ServiceServer](services.{{.}}, pb.Register{{.}}ServiceHandlerServer),
             {{ end }}
 		)
 	}

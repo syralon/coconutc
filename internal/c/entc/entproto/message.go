@@ -27,6 +27,12 @@ func WithForceOptional(optional bool) MessageOption {
 	}
 }
 
+func WithForceSingleField(single bool) MessageOption {
+	return func(builder *MessageBuildHelper) {
+		builder.singleField = single
+	}
+}
+
 func WithSkipImmutable(skip bool) MessageOption {
 	return func(builder *MessageBuildHelper) {
 		builder.skipImmutable = skip
@@ -65,6 +71,7 @@ type MessageBuildHelper struct {
 	edgeNameFunc  func(node *gen.Type) protoreflect.Name
 	mapping       TypeMapping
 	optional      bool
+	singleField   bool // treat repeated field as single
 	skipImmutable bool
 	skip          func(f *gen.Field, opt entproto.FieldOptions) bool
 	singleEdge    bool
@@ -136,6 +143,9 @@ func (b *MessageBuildHelper) fields(mb *protobuilder.MessageBuilder, node *gen.T
 		fb, err := NewField(v.Name, v, b.mapping)
 		if err != nil {
 			return err
+		}
+		if fb.IsRepeated() && b.singleField {
+			fb.SetCardinality(0) // force set repeated field to single
 		}
 		fb.SetProto3Optional((b.optional || v.Optional) && !fb.IsRepeated())
 		fb.SetComments(protobuilder.Comments{LeadingComment: v.Comment()})

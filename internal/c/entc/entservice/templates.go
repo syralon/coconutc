@@ -12,6 +12,8 @@ import (
 	"path"
 	"strings"
 	"text/template"
+
+	"github.com/iancoleman/strcase"
 )
 
 //go:embed templates
@@ -21,6 +23,7 @@ var templates *template.Template
 func init() {
 	funcs := map[string]any{
 		"toLower": strings.ToLower,
+		"camel":   strcase.ToLowerCamel,
 	}
 	var err error
 	templates, err = template.New("").Funcs(funcs).ParseFS(fs, "templates/*.tpl")

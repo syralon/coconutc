@@ -3,6 +3,7 @@
 package service
 
 import (
+    "{{.Module}}/internal/domain/repository"
     {{ range .Services }}"{{$.Module}}/internal/transport/service/{{ . | toLower }}service"
     {{ end }}
     "github.com/google/wire"
@@ -14,11 +15,11 @@ type Services struct {
 }
 
 func NewServices(
-    {{ range .Services }}{{ . | toLower }}Repo repository.{{.}}Repository,
+    {{ range .Services }}{{ . | camel }}Repo repository.{{.}}Repository,
     {{ end }}
 ) *Services {
     return &Services{
-        {{ range .Services }}{{.}}: {{ . | toLower }}service.New{{.}}Service({{.|toLower}}Repo),
+        {{ range .Services }}{{.}}: {{ . | toLower }}service.New{{.}}Service({{.|camel}}Repo),
         {{ end }}
     }
 }

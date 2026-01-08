@@ -48,11 +48,11 @@ func toProtoFunc(file *jen.File, node *gen.Type, opts *BuildOptions, withEdge bo
 		for _, fi := range node.Edges {
 			var v *jen.Statement
 			if fi.Unique {
-				v = jen.Id(fmt.Sprintf("%sToProto", fi.Type.Name)).Call(jen.Id("data").Dot("Edges").Dot(text.EntPascal(fi.Name)))
+				v = jen.Id(fmt.Sprintf("Ent%sToProto", fi.Type.Name)).Call(jen.Id("data").Dot("Edges").Dot(text.EntPascal(fi.Name)))
 			} else {
 				v = jen.Qual(pkgXSlices, "Trans").Call(
 					jen.Id("data").Dot("Edges").Dot(text.EntPascal(fi.Name)),
-					jen.Id(fmt.Sprintf("%sToProto", fi.Type.Name)),
+					jen.Id(fmt.Sprintf("Ent%sToProto", fi.Type.Name)),
 				)
 			}
 			fields = append(fields, jen.Id(text.ProtoPascal(fi.Name)).Op(":").Add(v).Op(","))
@@ -75,14 +75,23 @@ func toProtoFunc(file *jen.File, node *gen.Type, opts *BuildOptions, withEdge bo
 		Params(jen.Id("data").Op("*").Id(node.Name)).
 		Op("*").Qual(opts.ProtoPackage, text.ProtoPascal(node.Name)).
 		Block(
-			jen.Id("data").Dot("ToProto").Call(),
+			jen.Return(jen.Id("data").Dot("ToProto").Call()),
+		)
+	file.Line()
+
+	file.Func().
+		Id(fmt.Sprintf("Ent%sToProto", node.Name)).
+		Params(jen.Id("data").Op("*").Qual(opts.EntPackage, node.Name)).
+		Op("*").Qual(opts.ProtoPackage, text.ProtoPascal(node.Name)).
+		Block(
+			jen.Return(jen.Id("New" + node.Name).Call(jen.Id("data")).Dot("ToProto").Call()),
 		)
 	file.Line()
 }
 
 func newEntityFunc(file *jen.File, node *gen.Type, opts *BuildOptions) {
 	defer file.Line()
-	
+
 	file.Func().Id(fmt.Sprintf("New%s", node.Name)).
 		Params(jen.Id("data").Op("*").Qual(opts.EntPackage, node.Name)).
 		Params(jen.Op("*").Id(node.Name)).
