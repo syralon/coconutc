@@ -23,6 +23,12 @@ generate:
 	make proto
 	go generate ./...
 
+.PHONY: quickstart
+# quick start
+quickstart:
+	go mod tidy && go generate ./...
+	go run ./cmd/{{.Module|basepath}}
+
 # show help
 help:
 	@echo ''

@@ -35,13 +35,15 @@ func New() *cobra.Command {
 				exec.CommandContext(cmd.Context(), "go", "mod", "init", module),
 				exec.CommandContext(cmd.Context(), "go", "get", "entgo.io/ent"),
 				exec.CommandContext(cmd.Context(), "coconut", "add", "Example(name,status:int)"),
+				exec.CommandContext(cmd.Context(), "go", "mod", "tidy"),
 				exec.CommandContext(cmd.Context(), "coconut", "generate"),
 				exec.CommandContext(cmd.Context(), "ent", "generate", opt.target),
+				exec.CommandContext(cmd.Context(), "go", "mod", "tidy"),
+				exec.CommandContext(cmd.Context(), "go", "generate", "./..."),
 			); err != nil {
 				return err
 			}
-			fmt.Printf("Project '%s' is created.\n", module)
-			fmt.Printf("Quick start: 'cd %s && go run'\n", name)
+			fmt.Printf("\nProject '%s' is created, run `make quickstart` start.\n", module)
 			return nil
 		},
 	}

@@ -13,5 +13,5 @@ etcd:
     - 127.0.0.1:32379
 
 database:
-    driver: mysql
-    dsn: root:root@tcp(127.0.0.1:3306)/example?parseTime=true&loc=Local
+    driver: sqlite3
+    dsn: example.db
