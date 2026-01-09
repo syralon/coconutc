@@ -1,8 +1,8 @@
 package entservice
 
 import (
+	"bytes"
 	"context"
-	"os"
 	"path"
 	"strings"
 
@@ -38,11 +38,18 @@ func WithOutput(output string) GenerateOption {
 	}
 }
 
+func WithVerbose(verbose bool) GenerateOption {
+	return func(generator *Generator) {
+		generator.verbose = verbose
+	}
+}
+
 type Generator struct {
 	output    string
 	entPath   string
 	protoPath string
 	overwrite bool
+	verbose   bool
 
 	entPackage   string
 	protoPackage string
@@ -83,17 +90,23 @@ func (g *Generator) init() (err error) {
 	var servicePath = "internal/transport/service"
 	var txPath = "internal/infra/tx"
 	g.addWriter(
-		func(n *gen.Type) string { return path.Join(g.output, entityPath, strings.ToLower(n.Name)) + ".go" },
+		func(n *gen.Type) string {
+			return path.Join(g.output, entityPath, strings.ToLower(n.Name)) + ".coconut.go"
+		},
 		EntityBuilder("entity", true),
 	).addWriter(
-		func(n *gen.Type) string { return path.Join(g.output, repositoryPath, strings.ToLower(n.Name)) + ".go" },
+		func(n *gen.Type) string {
+			return path.Join(g.output, repositoryPath, strings.ToLower(n.Name)) + ".coconut.go"
+		},
 		RepositoryInterfaceBuilder("repository", path.Join(g.module, entityPath)),
 	).addWriter(
-		func(n *gen.Type) string { return path.Join(g.output, dataPath, strings.ToLower(n.Name)) + ".go" },
+		func(n *gen.Type) string {
+			return path.Join(g.output, dataPath, strings.ToLower(n.Name)) + ".coconut.go"
+		},
 		RepositoryBuilder("data", path.Join(g.module, entityPath), path.Join(g.module, txPath)),
 	).addWriter(
 		func(n *gen.Type) string {
-			return path.Join(g.output, servicePath, strings.ToLower(n.Name)+"service", strings.ToLower(n.Name)) + ".go"
+			return path.Join(g.output, servicePath, strings.ToLower(n.Name)+"service", strings.ToLower(n.Name)) + ".coconut.go"
 		},
 		ServiceBuilder(path.Join(g.module, repositoryPath), path.Join(g.module, entityPath)),
 	)
@@ -130,6 +143,9 @@ func (g *Generator) Generate(ctx context.Context, graph *gen.Graph) error {
 			ProtoPackage: g.protoPackage,
 			EntPackage:   g.entPackage,
 		}
+		if apiOpts.Pattern != "" {
+			data.GatewayServices = append(data.GatewayServices, node.Name)
+		}
 		for _, w := range g.writers {
 			if err = w.build(ctx, node, opts); err != nil {
 				return err
@@ -159,6 +175,7 @@ type writer struct {
 	filename  func(n *gen.Type) string
 	builder   Builder
 	overwrite bool
+	verbose   bool
 }
 
 func (w *writer) build(ctx context.Context, node *gen.Type, opts *BuildOptions) error {
@@ -166,13 +183,14 @@ func (w *writer) build(ctx context.Context, node *gen.Type, opts *BuildOptions) 
 	if err != nil {
 		return err
 	}
-	filename := w.filename(node)
-	if !w.overwrite {
-		// TODO
-		if _, err = os.Stat(filename); err == nil || !os.IsNotExist(err) {
-			return nil
-		}
+	buf := new(bytes.Buffer)
+	if err = file.Render(buf); err != nil {
+		return err
 	}
-	_ = os.MkdirAll(path.Dir(filename), 0700)
-	return file.Save(filename)
+	filename := w.filename(node)
+	_, err = autoOverwriteFile(filename, buf.Bytes(), w.overwrite)
+	if err != nil {
+		return err
+	}
+	return nil
 }

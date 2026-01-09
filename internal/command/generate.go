@@ -8,14 +8,15 @@ import (
 	"entgo.io/ent/entc/gen"
 	"github.com/spf13/cobra"
 	"github.com/syralon/coconutc/internal/c/entc/entproto"
+	"github.com/syralon/coconutc/internal/c/entc/entschema"
 	"github.com/syralon/coconutc/internal/c/entc/entservice"
 )
 
-func Run() *cobra.Command {
+func Generate() *cobra.Command {
 	var opt options
 	cmd := &cobra.Command{
-		Use:   "run",
-		Short: "Generate api services from ent schemas.",
+		Use:   "generate",
+		Short: "Generate protobuf and api services from ent schemas.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if err := opt.parse(); err != nil {
@@ -27,6 +28,12 @@ func Run() *cobra.Command {
 				return err
 			}
 
+			if len(args) > 0 {
+				if err = entschema.Generate(opt.target, args, graph); err != nil {
+					return err
+				}
+			}
+
 			protoGenerator, err := entproto.NewGenerator(entproto.WithOutput(opt.output), entproto.WithVerbose(opt.verbose))
 			if err != nil {
 				return err
@@ -34,7 +41,7 @@ func Run() *cobra.Command {
 			if err = protoGenerator.Generate(ctx, graph); err != nil {
 				return err
 			}
-			
+
 			serviceGenerator, err := entservice.NewGenerator(
 				entservice.WithOutput(opt.output),
 				entservice.WithOverwrite(opt.overwrite),
@@ -48,7 +55,7 @@ func Run() *cobra.Command {
 			}
 
 			_ = exec.Command("buf", "format", "-w").Run()
-			_ = exec.Command("ent", "generate", "--target", opt.target).Run()
+			_ = exec.Command("ent", "generate", opt.target).Run()
 			_ = exec.Command("go", "generate", "./...", opt.target).Run()
 			return nil
 		},

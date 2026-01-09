@@ -1,4 +1,4 @@
-// @internal/transport/interceptor/logger.go
+// @file: internal/transport/interceptor/logger.go
 
 package interceptor
 

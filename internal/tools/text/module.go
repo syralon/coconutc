@@ -33,7 +33,7 @@ func ProtoModule(module string) string {
 }
 
 func ProtoPackage(module string) string {
-	temp := strings.Split(module, "/")
+	temp := strings.Split(strings.ReplaceAll(module, "-", "_"), "/")
 	if len(temp) < 3 {
 		return path.Base(module)
 	}

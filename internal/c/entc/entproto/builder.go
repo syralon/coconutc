@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strings"
 
 	"entgo.io/ent/entc/gen"
 	"github.com/jhump/protoreflect/v2/protobuilder"
@@ -79,7 +80,7 @@ func NewGenerator(options ...GenerateOption) (*Generator, error) {
 		g.protoPackage = text.ProtoPackage(module)
 	}
 	if g.goPackage == "" {
-		g.goPackage = path.Join(module, g.path) + ";" + path.Base(g.path)
+		g.goPackage = path.Join(module, g.path) + ";" + strings.ReplaceAll(path.Base(g.path), "-", "_")
 	}
 	g.builders = []ProtoBuilder{
 		NewEntBuilder(

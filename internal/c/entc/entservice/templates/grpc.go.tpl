@@ -1,4 +1,4 @@
-// @internal/transport/server/grpc.go
+// @file: internal/transport/server/grpc.go
 
 package server
 
@@ -11,13 +11,12 @@ import (
 	pb "{{.ProtoPackage}}"
 
 	"github.com/syralon/coconut/proto/syralon/coconut/field"
-	"github.com/syralon/coconut/transport"
 	"github.com/syralon/coconut/transport/grpc"
 	stdgrpc "google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
 
-func NewServer(c *config.Config, services *service.Services) transport.Server {
+func NewGRPCServer(c *config.Config, services *service.Services) *grpc.Server {
 	srv := grpc.NewServer(&c.GRPC)
 
 	srv.WithUnaryInterceptor(interceptor.LogServerInterceptor())

@@ -10,7 +10,10 @@ const schemaTemplateText = `package schema
 
 import (
     "entgo.io/ent"
+	"entgo.io/ent/schema"
     "entgo.io/ent/schema/field"
+
+	"github.com/syralon/coconutc/pkg/annotation/entproto"
 )
 
 // {{ .Name }} holds the schema definition for the {{ .Name }} entity.
@@ -30,6 +33,13 @@ func ({{ .Name }}) Fields() []ent.Field {
 func ({{ .Name }}) Edges() []ent.Edge {
 	return nil
 }
+
+// Annotations returns a list of schema annotations to be used by codegen extensions.
+func ({{ .Name }}) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		entproto.API(entproto.WithAPIPattern("/v1")),
+	}
+}
 `
 
 const (
@@ -39,7 +49,8 @@ func ({{ .Name }}) Fields() []ent.Field {
 		{{ range .Fields }}field.{{ .Type.String | pascal }}("{{.Name}}"),
 		{{ end }}
     }
-}`
+}
+`
 )
 
 var (

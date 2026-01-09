@@ -30,7 +30,7 @@ func toProtoFunc(file *jen.File, node *gen.Type, opts *BuildOptions, withEdge bo
 	var fields []jen.Code
 	fields = append(
 		fields,
-		jen.Id("Id").Op(":").Add(entID(node, jen.Id("data").Dot("ID"))).Op(","),
+		jen.Id("Id").Op(":").Add(protoType(node.IDType.Type, jen.Id("data").Dot("ID"))).Op(","),
 	)
 	for _, fi := range node.Fields {
 		var v *jen.Statement
@@ -40,7 +40,7 @@ func toProtoFunc(file *jen.File, node *gen.Type, opts *BuildOptions, withEdge bo
 		} else {
 			v = jen.Id("data").Dot(text.EntPascal(fi.Name))
 		}
-		v = unwrap(fi, v)
+		v = unwrapProto(fi, v)
 		fields = append(fields, jen.Id(text.ProtoPascal(fi.Name)).Op(":").Add(v).Op(","))
 	}
 

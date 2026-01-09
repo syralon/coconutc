@@ -1,4 +1,4 @@
-// @internal/infra/dependency/ent.go
+// @file: internal/infra/dependency/ent.go
 
 package dependency
 
@@ -6,7 +6,6 @@ import (
 	"{{.Module}}/ent"
 	"{{.Module}}/internal/config"
 
-	_ "github.com/go-sql-driver/mysql"
 )
 
 func NewEnt(c *config.Config) (*ent.Client, func(), error) {

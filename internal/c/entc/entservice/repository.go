@@ -180,7 +180,7 @@ func (b *repositoryBuilder) set() {
 		b.fn(b.fnSet(v)).
 			Block(
 				define("_", "err").Id("rep").Dot(b.node.Name).Call(jen.Id("ctx")).Dot("Update").Call().
-					Dot(fnName).Call(jen.Id("value")).Dot("Save").Call(jen.Id("ctx")),
+					Dot(fnName).Call(entType(v.Type.Type, jen.Id("value"))).Dot("Save").Call(jen.Id("ctx")),
 				jen.Return(jen.Err()),
 			).Line()
 	}

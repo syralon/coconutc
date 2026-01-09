@@ -1,4 +1,4 @@
-// @internal/transport/service/service.go
+// @file: internal/transport/service/service.go
 
 package service
 
@@ -6,7 +6,6 @@ import (
     "{{.Module}}/internal/domain/repository"
     {{ range .Services }}"{{$.Module}}/internal/transport/service/{{ . | toLower }}service"
     {{ end }}
-    "github.com/google/wire"
 )
 
 type Services struct {
@@ -23,7 +22,3 @@ func NewServices(
         {{ end }}
     }
 }
-
-var ProviderSet = wire.NewSet(
-    NewServices,
-)

@@ -8,18 +8,24 @@ import (
 	"github.com/syralon/coconutc/internal/command"
 )
 
+const (
+	usage = `A service generator base on ent(https://entgo.io/).
+Homepage: https://github.com/syralon/coconutc.
+`
+)
+
 func main() {
 	cmd := &cobra.Command{
-		Use:           "entc-gen",
-		Long:          "A service generator base on ent(https://entgo.io/).\nHomepage: https://github.com/syralon/coconutc",
+		Use:           "coconut",
+		Long:          usage,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 	}
-	cmd.AddCommand(command.Ent()...)
 	cmd.AddCommand(
 		command.Proto(),
 		command.Service(),
-		command.Run(),
+		command.Generate(),
+		command.Add(),
 		command.New(),
 	)
 	if err := cmd.Execute(); err != nil {

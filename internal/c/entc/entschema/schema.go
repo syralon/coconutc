@@ -123,7 +123,7 @@ func defaultFields() Fields {
 func (s *Schema) WriteFile(target string) error {
 	filename := path.Join(target, strings.ToLower(s.Name)+".go")
 	_, err := os.Stat(filename)
-	if errors.Is(err, os.ErrNotExist) {
+	if os.IsNotExist(err) {
 		return s.writeFile(filename)
 	}
 	data, err := os.ReadFile(filename)
@@ -178,11 +178,11 @@ func (s *Schema) replace(data []byte) ([]byte, error) {
 	for _, line := range lines[end+1:] {
 		buf.WriteString(line + "\n")
 	}
-
-	return buf.Bytes(), nil
+	return format.Source(buf.Bytes())
 }
 
 func (s *Schema) writeFile(filename string) error {
+	_ = os.MkdirAll(path.Dir(filename), os.ModePerm)
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err

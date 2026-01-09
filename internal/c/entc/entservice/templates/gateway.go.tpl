@@ -1,4 +1,4 @@
-// @internal/transport/server/gateway.go
+// @file: internal/transport/server/gateway.go
 
 package server
 
@@ -9,15 +9,11 @@ import (
 	pb "{{.ProtoPackage}}"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/syralon/coconut/transport"
 	"github.com/syralon/coconut/transport/gateway"
 	cocomiddleware "github.com/syralon/coconut/transport/gateway/middleware"
 )
 
-func NewGatewayServer(
-	c *config.Config,
-	services *service.Services,
-) transport.Server {
+func NewGatewayServer(c *config.Config, services *service.Services) *gateway.Server {
 	srv := gateway.NewServer(&c.Gateway)
 	srv.WithOptions(
 		runtime.WithMiddlewares(
@@ -28,12 +24,12 @@ func NewGatewayServer(
 	if c.Gateway.Endpoint != "" {
 		srv.RegisterEndpoint(
 			c.Gateway.Endpoint,
-			{{ range .Services }}pb.Register{{.}}ServiceHandlerFromEndpoint,
+			{{ range .GatewayServices }}pb.Register{{.}}ServiceHandlerFromEndpoint,
             {{ end }}
 		)
 	} else {
 		srv.Register(
-            {{ range .Services }}gateway.ServerRegister[pb.{{.}}ServiceServer](services.{{.}}, pb.Register{{.}}ServiceHandlerServer),
+            {{ range .GatewayServices }}gateway.ServerRegister[pb.{{.}}ServiceServer](services.{{.}}, pb.Register{{.}}ServiceHandlerServer),
             {{ end }}
 		)
 	}

@@ -1,4 +1,4 @@
-// @internal/domain/txn/txn.go
+// @file: internal/domain/txn/txn.go
 
 package txn
 
