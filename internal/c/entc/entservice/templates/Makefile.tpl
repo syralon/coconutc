@@ -18,6 +18,22 @@ openapi:
 proto:
 	make grpc gateway openapi
 
+.PHONY: atlas
+# generate database migrations by atlas
+atlas:
+	@LATEST_FILE=$$(ls -1 migrations/$(MODULE)/*.sql 2>/dev/null | sort | tail -n 1); \
+	if [ -z "$$LATEST_FILE" ]; then \
+	    VERSION="v0.0.1"; \
+	else \
+	    LATEST_VERSION=$$(basename $$LATEST_FILE | sed -E 's/.*_v([0-9]+\.[0-9]+\.[0-9]+)\.sql/\1/'); \
+	    VERSION=v$$(echo $$LATEST_VERSION | awk -F. '{printf "%d.%d.%d", $$1, $$2, $$3+1}'); \
+	fi; \
+	atlas migrate diff $$VERSION \
+		--dir "file://migrations" \
+		--to "ent://ent/schema" \
+		--dev-url "docker://mysql/8/ent" \
+		--format  "{{"{{"}} sql . \"    \"{{"}}"}}"
+
 .PHONY: generate
 generate:
 	make proto
@@ -26,13 +42,20 @@ generate:
 .PHONY: quickstart
 # quick start
 quickstart:
+	@rm -f example.db
+	@atlas migrate diff --dir "file://quickstart" --to "ent://ent/schema" --dev-url "sqlite://example.db"
+	@atlas migrate apply --url "sqlite://example.db" --dir "file://quickstart"
+	@rm -rf ./quickstart
+	@echo "=========================================================="
+	@echo " The quickstart server is just for example, DON'T USE IT! "
+	@echo "=========================================================="
 	go mod tidy && go generate ./...
 	go run ./cmd/{{.Module|basepath}}
 
 .PHONY: build
 # build
 build:
-	go build -ldflags "-X {{.Module}}/version.BuildTime=$(shell date '+%Y-%m-%d_%H:%M:%S') -X {{.Module}}/version.Version=$(shell git rev-parse HEAD)" ./cmd/{{.Module|basepath}}
+	go build -ldflags "-X {{.Module}}/version.BuildTime=$(shell date '+%Y%m%d%H%M%S') -X {{.Module}}/version.Version=$(shell git rev-parse HEAD)" ./cmd/{{.Module|basepath}}
 
 # show help
 help:

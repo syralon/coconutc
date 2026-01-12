@@ -9,6 +9,8 @@ import (
 const schemaTemplateText = `package schema
 
 import (
+	{{ range .Fields }}{{if eq .Name "created_at" }}"time"{{break}}{{end}}{{if eq .Name "updated_at" }}"time"{{break}}{{end}}{{end}}
+
     "entgo.io/ent"
 	"entgo.io/ent/schema"
     "entgo.io/ent/schema/field"
@@ -24,7 +26,7 @@ type {{ .Name }} struct {
 // Fields of the {{ .Name }}.
 func ({{ .Name }}) Fields() []ent.Field {
     return []ent.Field{
-		{{ range .Fields }}field.{{ .Type.String | pascal }}("{{.Name}}"),
+		{{ range .Fields }}field.{{ .Type.String | pascal }}("{{.Name}}"){{if eq .Name "created_at" }}.Default(time.Now){{end}}{{if eq .Name "updated_at" }}.Default(time.Now).UpdateDefault(time.Now){{end}},
 		{{ end }}
     }
 }
@@ -46,7 +48,7 @@ const (
 	schemaFieldsTemplateText = `
 func ({{ .Name }}) Fields() []ent.Field {
     return []ent.Field{
-		{{ range .Fields }}field.{{ .Type.String | pascal }}("{{.Name}}"),
+		{{ range .Fields }}field.{{ .Type.String | pascal }}("{{.Name}}"){{if eq .Name "created_at" }}.Default(time.Now){{end}}{{if eq .Name "updated_at" }}.Default(time.Now).UpdateDefault(time.Now){{end}},
 		{{ end }}
     }
 }

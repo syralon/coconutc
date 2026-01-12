@@ -28,3 +28,17 @@ func TestTemplate_service(t *testing.T) {
 	}
 	fmt.Println(string(b))
 }
+
+func TestGitignore(t *testing.T) {
+	data := &RenderData{
+		Module:       "github.com/syralon/example",
+		Services:     []string{"Hello", "Boom"},
+		ProtoPath:    "proto/syralon/example",
+		ProtoPackage: "github.com/syralon/example/proto/syralon/example",
+	}
+	b, err := data.Render("gitignore.tpl")
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(string(b))
+}

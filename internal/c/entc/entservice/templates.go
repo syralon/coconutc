@@ -4,10 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"embed"
-	"errors"
 	"fmt"
 	"go/format"
-	"io"
 	"path"
 	"strings"
 	"text/template"
@@ -104,41 +102,37 @@ func (r *RenderData) renderFile(output string, buf *bytes.Buffer, tpl *template.
 		return err
 	}
 	data := buf.Bytes()
-	filename, err := r.filenameFromHeader(output, tpl.Name(), data)
-	if err != nil {
-		return err
-	}
+	filename := path.Join(output, r.filenameFromHeader(tpl.Name(), data))
 	if strings.HasSuffix(tpl.Name(), ".go.tpl") {
+		var err error
 		data, err = format.Source(data)
 		if err != nil {
 			return err
 		}
 	}
-	_, err = autoOverwriteFile(filename, data, r.overwrite)
+	_, err := autoOverwriteFile(filename, data, r.overwrite)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *RenderData) filenameFromHeader(output string, tpl string, data []byte) (string, error) {
+func (r *RenderData) filenameFromHeader(tpl string, data []byte) string {
 	reader := bufio.NewReader(bytes.NewReader(data))
-	var filename = strings.TrimSuffix(tpl, ".tpl")
 	for {
 		line, err := reader.ReadString('\n')
-		if errors.Is(err, io.EOF) {
-			break
-		}
 		if err != nil {
-			return "", err
+			break
 		}
 		if len(line) == 0 {
 			break
 		}
 		if strings.HasPrefix(line, "// @file:") {
-			filename = strings.TrimSpace(strings.TrimPrefix(line, "// @file:"))
-			break
+			return strings.TrimSpace(strings.TrimPrefix(line, "// @file:"))
+		}
+		if strings.HasPrefix(line, "# @file:") {
+			return strings.TrimSpace(strings.TrimPrefix(line, "# @file:"))
 		}
 	}
-	return path.Join(output, filename), nil
+	return strings.TrimSuffix(tpl, ".tpl")
 }
