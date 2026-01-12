@@ -9,9 +9,10 @@ import (
 )
 
 func NewETCDClient(c *config.Config) (*clientv3.Client, func(), error) {
-	client, err := c.ETCD.NewClient()
-	if err != nil {
-		return nil, nil, err
-	}
-	return client, func() { _ = client.Close() }, err
+	// client, err := c.ETCD.NewClient()
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
+	// return client, func() { _ = client.Close() }, err
+	return nil, func() {}, nil
 }
