@@ -55,7 +55,7 @@ quickstart:
 .PHONY: build
 # build
 build:
-	go build -ldflags "-X {{.Module}}/version.BuildTime=$(shell date '+%Y%m%d%H%M%S') -X {{.Module}}/version.Version=$(shell git rev-parse HEAD)" ./cmd/{{.Module|basepath}}
+	go build -ldflags "-X {{.Module}}/version.BuildTime=$(shell date '+%Y-%m-%dT%H:%M:%S') -X {{.Module}}/version.Version=$(shell git rev-parse HEAD)" ./cmd/{{.Module|basepath}}
 
 # show help
 help:

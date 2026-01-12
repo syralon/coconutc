@@ -10,7 +10,7 @@ ADD . .
 
 ENV GOPROXY=https://goproxy.cn,direct
 
-RUN go build -ldflags "-X {{.Module}}/version.BuildTime=$(date '+%Y-%m-%d_%H:%M:%S') -X {{.Module}}/version.Version=$(git rev-parse HEAD)" ./cmd/{{.Module|basepath}}
+RUN go build -ldflags "-X {{.Module}}/version.BuildTime=$(date '+%Y-%m-%dT%H:%M:%S') -X {{.Module}}/version.Version=$(git rev-parse HEAD)" ./cmd/{{.Module|basepath}}
 
 FROM alpine:latest AS runner
 
