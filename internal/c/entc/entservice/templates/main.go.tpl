@@ -6,9 +6,9 @@ import (
 	"context"
 	"os"
 
-	"github.com/syralon/coconut-example/internal/bootstrap"
-	"github.com/syralon/coconut-example/internal/config"
-	"github.com/syralon/coconut-example/version"
+	"{{.Module}}/internal/bootstrap"
+	"{{.Module}}/internal/config"
+	"{{.Module}}/version"
 
 	"github.com/google/gops/agent"
 )
