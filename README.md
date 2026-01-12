@@ -1,4 +1,4 @@
-# Coconutc
+# 🥥Coconutc
 
 A code generate framework based on [ent](https://entgo.io)
 
