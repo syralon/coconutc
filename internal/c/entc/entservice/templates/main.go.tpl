@@ -4,10 +4,25 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"github.com/syralon/coconut-example/internal/bootstrap"
 	"github.com/syralon/coconut-example/internal/config"
+	"github.com/syralon/coconut-example/version"
+
+	"github.com/google/gops/agent"
 )
+
+func init() {
+	if len(os.Args) > 1 && os.Args[1] == "version" {
+		version.Show()
+		os.Exit(0)
+	}
+
+	if err := agent.Listen(agent.Options{}); err != nil {
+		panic(err)
+	}
+}
 
 func main() {
 	ctx := context.Background()
