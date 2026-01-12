@@ -14,7 +14,7 @@ require (
 	github.com/jhump/protoreflect/v2 v2.0.0-beta.2
 	github.com/spf13/cobra v1.7.0
 	github.com/syralon/coconut/proto v0.0.0-20251217102055-2837510c71e2
-	github.com/syralon/coconutc/pkg v0.0.0-20260112095518-93deda8311c5
+	github.com/syralon/coconutc/pkg v0.0.1
 	golang.org/x/mod v0.31.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20251222181119-0a764e51fe1b
 	google.golang.org/protobuf v1.36.11

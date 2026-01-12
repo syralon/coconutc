@@ -66,6 +66,8 @@ github.com/syralon/coconut/proto v0.0.0-20251217102055-2837510c71e2 h1:2cLfRCGM4
 github.com/syralon/coconut/proto v0.0.0-20251217102055-2837510c71e2/go.mod h1:EpXoscEWk7RI5Eef5PxzQTXKsOh9QteohtewfuVpdo0=
 github.com/syralon/coconutc/pkg v0.0.0-20260112095518-93deda8311c5 h1:KHYR7hlqtNTL1jcj32M5hLkMX/6nGF3z4EOWwFa0/Yo=
 github.com/syralon/coconutc/pkg v0.0.0-20260112095518-93deda8311c5/go.mod h1:9rg2lJK7UylthK92/iAUKWMZD5fAx8PHg9JOgHFgby8=
+github.com/syralon/coconutc/pkg v0.0.1 h1:Wdjjm06TgT+IZCnj6T1zg/YUzNAInRBjd8Gxv3nKwlc=
+github.com/syralon/coconutc/pkg v0.0.1/go.mod h1:9rg2lJK7UylthK92/iAUKWMZD5fAx8PHg9JOgHFgby8=
 github.com/zclconf/go-cty v1.14.4 h1:uXXczd9QDGsgu0i/QFR/hzI5NYCHLf6NQw/atrbnhq8=
 github.com/zclconf/go-cty v1.14.4/go.mod h1:VvMs5i0vgZdhYawQNq5kePSpLAoz8u1xvZgrPIxfnZE=
 github.com/zclconf/go-cty-yaml v1.1.0 h1:nP+jp0qPHv2IhUVqmQSzjvqAWcObN0KBkUl2rWBdig0=
