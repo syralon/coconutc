@@ -275,7 +275,7 @@ func (b *repositoryBuilder) list() {
 		if err != nil {
 			return
 		}
-		if !fieldOpts.Filterable {
+		if fieldOpts.Sensitive || !fieldOpts.Filterable {
 			continue
 		}
 		fields = append(fields, jen.Id("options").Dot("Get"+text.ProtoPascal(v.Name)).Call().Dot("Selector").Call(
@@ -308,6 +308,13 @@ func (b *repositoryBuilder) create() {
 	defer b.file.Line()
 	create := define("op").Id("rep").Dot(b.node.Name).Call(jen.Id("ctx")).Dot("Create()")
 	for _, v := range b.node.Fields {
+		fieldOpts, err := entproto.GetFieldOptions(v.Annotations)
+		if err != nil {
+			return
+		}
+		if fieldOpts.Sensitive {
+			continue
+		}
 		if v.Name == "created_at" || v.Name == "updated_at" {
 			continue
 		}
@@ -345,7 +352,7 @@ func (b *repositoryBuilder) update() {
 		if err != nil {
 			panic(err)
 		}
-		if fieldOpts.Immutable {
+		if fieldOpts.Sensitive || fieldOpts.Immutable {
 			continue
 		}
 		val := jen.Id("data").Dot(fmt.Sprintf("Get%s()", text.ProtoPascal(v.Name)))

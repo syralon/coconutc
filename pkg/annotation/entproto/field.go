@@ -30,10 +30,10 @@ func (f Filter) Filters() []Filter {
 
 type FieldOptions struct {
 	Name         string
-	Visible      bool
 	Filterable   bool
 	Immutable    bool
 	Settable     bool
+	Sensitive    bool
 	Filter       Filter
 	Orderable    bool
 	Type         field.Type
@@ -72,9 +72,9 @@ func WithFieldFilterable(filterable bool) FieldOption {
 	}
 }
 
-func WithFieldVisible(visible bool) FieldOption {
+func WithFieldSensitive(sensitive bool) FieldOption {
 	return func(a *fieldAnnotation) {
-		a.Visible = visible
+		a.Sensitive = sensitive
 	}
 }
 
@@ -111,7 +111,6 @@ func Field(opts ...FieldOption) entc.Annotation {
 }
 
 var defaultFieldOption = FieldOptions{
-	Visible:    true,
 	Filterable: true,
 	Filter:     FilterAll,
 }
