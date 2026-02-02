@@ -8,6 +8,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/dave/jennifer/jen"
 	"github.com/syralon/coconutc/internal/tools/text"
+	"github.com/syralon/coconutc/pkg/annotation/entproto"
 )
 
 func EntityBuilder(pkg string, withEdge bool) BuildFunc {
@@ -33,6 +34,13 @@ func toProtoFunc(file *jen.File, node *gen.Type, opts *BuildOptions, withEdge bo
 		jen.Id("Id").Op(":").Add(protoType(node.IDType.Type, jen.Id("data").Dot("ID"))).Op(","),
 	)
 	for _, fi := range node.Fields {
+		fieldOpts, err := entproto.GetFieldOptions(fi.Annotations)
+		if err != nil {
+			return
+		}
+		if fieldOpts.Sensitive {
+			continue
+		}
 		var v *jen.Statement
 		if fi.Type.Type == field.TypeTime {
 			v = jen.Qual(pkgTimestamppb, "New").
