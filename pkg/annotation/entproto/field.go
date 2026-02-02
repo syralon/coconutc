@@ -72,6 +72,8 @@ func WithFieldFilterable(filterable bool) FieldOption {
 	}
 }
 
+// WithFieldSensitive
+// The sensitive field will not be shown.
 func WithFieldSensitive(sensitive bool) FieldOption {
 	return func(a *fieldAnnotation) {
 		a.Sensitive = sensitive

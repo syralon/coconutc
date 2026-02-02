@@ -308,13 +308,6 @@ func (b *repositoryBuilder) create() {
 	defer b.file.Line()
 	create := define("op").Id("rep").Dot(b.node.Name).Call(jen.Id("ctx")).Dot("Create()")
 	for _, v := range b.node.Fields {
-		fieldOpts, err := entproto.GetFieldOptions(v.Annotations)
-		if err != nil {
-			return
-		}
-		if fieldOpts.Sensitive {
-			continue
-		}
 		if v.Name == "created_at" || v.Name == "updated_at" {
 			continue
 		}
@@ -352,7 +345,7 @@ func (b *repositoryBuilder) update() {
 		if err != nil {
 			panic(err)
 		}
-		if fieldOpts.Sensitive || fieldOpts.Immutable {
+		if fieldOpts.Immutable {
 			continue
 		}
 		val := jen.Id("data").Dot(fmt.Sprintf("Get%s()", text.ProtoPascal(v.Name)))
