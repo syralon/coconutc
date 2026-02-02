@@ -91,7 +91,7 @@ func (b *ServiceBuilder) messages(ctx *Context, file *protobuilder.FileBuilder, 
 		WithForceOptional(true),
 		WithSingleEdge(true),
 		WithForceSingleField(true),
-		WithSkipFunc(func(f *gen.Field, opt entproto.FieldOptions) bool { return !opt.Filterable }),
+		WithSkipFunc(func(f *gen.Field, opt entproto.FieldOptions) bool { return !opt.Visible || !opt.Filterable }),
 		WithEdgeName(func(g *gen.Type) protoreflect.Name { return protoreflect.Name(fmt.Sprintf("%sOptions", g.Name)) }),
 	).Build(ctx, optionsMessage, node)
 	if err != nil {
@@ -108,7 +108,7 @@ func (b *ServiceBuilder) messages(ctx *Context, file *protobuilder.FileBuilder, 
 		WithTypeMapping(EntityTypeMapping),
 		WithForceOptional(true),
 		WithSingleEdge(true),
-		WithSkipFunc(func(f *gen.Field, opt entproto.FieldOptions) bool { return opt.Immutable }),
+		WithSkipFunc(func(f *gen.Field, opt entproto.FieldOptions) bool { return !opt.Visible || opt.Immutable }),
 		WithSkipID(true),
 		WithEdgeName(func(g *gen.Type) protoreflect.Name { return protoreflect.Name(fmt.Sprintf("%sUpdate", g.Name)) }),
 	).Build(ctx, update, node)
@@ -119,7 +119,7 @@ func (b *ServiceBuilder) messages(ctx *Context, file *protobuilder.FileBuilder, 
 		WithEdgeName(func(node *gen.Type) protoreflect.Name { return protoreflect.Name(node.Name) }),
 		WithSkipID(true),
 		WithSkipFunc(func(f *gen.Field, opt entproto.FieldOptions) bool {
-			return f.Name == "created_at" || f.Name == "updated_at"
+			return !opt.Visible || f.Name == "created_at" || f.Name == "updated_at"
 		}),
 		WithEdgeName(func(g *gen.Type) protoreflect.Name { return protoreflect.Name(fmt.Sprintf("%sCreate", g.Name)) }),
 	).Build(ctx, create, node)
