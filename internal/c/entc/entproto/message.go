@@ -95,15 +95,15 @@ func NewMessageBuildHelper(opts ...MessageOption) *MessageBuildHelper {
 	return mb
 }
 
-func (b *MessageBuildHelper) Build(ctx *Context, mb *protobuilder.MessageBuilder, node *gen.Type) error {
+func (b *MessageBuildHelper) Build(ctx *Context, mb *protobuilder.MessageBuilder, node *gen.Type, skipProtoEnum ...bool) error {
 	if !b.skipID {
-		idField, err := NewField("id", node.ID, b.mapping)
+		idField, err := NewField(ctx, "id", node, node.ID, b.mapping)
 		if err != nil {
 			return err
 		}
 		mb.AddField(idField.SetProto3Optional(b.optional))
 	}
-	if err := b.fields(mb, node); err != nil {
+	if err := b.fields(ctx, mb, node, skipProtoEnum...); err != nil {
 		return err
 	}
 	if doc, err := openapi.GetSchema(node.Annotations); err != nil {
@@ -128,7 +128,7 @@ func (b *MessageBuildHelper) Build(ctx *Context, mb *protobuilder.MessageBuilder
 	return nil
 }
 
-func (b *MessageBuildHelper) fields(mb *protobuilder.MessageBuilder, node *gen.Type) error {
+func (b *MessageBuildHelper) fields(ctx *Context, mb *protobuilder.MessageBuilder, node *gen.Type, skipProtoEnum ...bool) error {
 	for _, v := range node.Fields {
 		opt, err := entproto.GetFieldOptions(v.Annotations)
 		if err != nil {
@@ -140,7 +140,7 @@ func (b *MessageBuildHelper) fields(mb *protobuilder.MessageBuilder, node *gen.T
 		if b.skip(v, opt) {
 			continue
 		}
-		fb, err := NewField(v.Name, v, b.mapping)
+		fb, err := NewField(ctx, v.Name, node, v, b.mapping, skipProtoEnum...)
 		if err != nil {
 			return err
 		}

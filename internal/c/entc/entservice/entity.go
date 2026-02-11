@@ -7,6 +7,7 @@ import (
 	"entgo.io/ent/entc/gen"
 	"entgo.io/ent/schema/field"
 	"github.com/dave/jennifer/jen"
+	"github.com/iancoleman/strcase"
 	"github.com/syralon/coconutc/internal/tools/text"
 	"github.com/syralon/coconutc/pkg/annotation/entproto"
 )
@@ -48,7 +49,12 @@ func toProtoFunc(file *jen.File, node *gen.Type, opts *BuildOptions, withEdge bo
 		} else {
 			v = jen.Id("data").Dot(text.EntPascal(fi.Name))
 		}
-		v = unwrapProto(fi, v)
+		if fieldOpts.ProtoEnum {
+			enumName := fmt.Sprintf("%s_%s", strcase.ToScreamingSnake(node.Name), strcase.ToScreamingSnake(fi.Name))
+			v = jen.Qual(opts.ProtoPackage, enumName).Call(v)
+		} else {
+			v = unwrapProto(fi, v)
+		}
 		fields = append(fields, jen.Id(text.ProtoPascal(fi.Name)).Op(":").Add(v).Op(","))
 	}
 

@@ -29,15 +29,18 @@ func (f Filter) Filters() []Filter {
 }
 
 type FieldOptions struct {
-	Name         string
-	Filterable   bool
-	Immutable    bool
-	Settable     bool
-	Sensitive    bool
-	Filter       Filter
-	Orderable    bool
-	Type         field.Type
-	TypeRepeated bool
+	//Name           string
+
+	Filterable     bool
+	Immutable      bool
+	Settable       bool
+	Sensitive      bool
+	Filter         Filter
+	Orderable      bool
+	Type           field.Type
+	TypeRepeated   bool
+	ProtoEnum      bool
+	ProtoEnumValue map[string]int32
 }
 
 type fieldAnnotation struct {
@@ -48,11 +51,11 @@ func (a *fieldAnnotation) Name() string { return fieldAnnotationName }
 
 type FieldOption func(*fieldAnnotation)
 
-func WithFieldName(name string) FieldOption {
-	return func(a *fieldAnnotation) {
-		a.FieldOptions.Name = name
-	}
-}
+//func WithFieldName(name string) FieldOption {
+//	return func(a *fieldAnnotation) {
+//		a.FieldOptions.Name = name
+//	}
+//}
 
 func WithFieldImmutable(immutable bool) FieldOption {
 	return func(a *fieldAnnotation) {
@@ -99,6 +102,13 @@ func WithFieldType(fieldType field.Type, repeated ...bool) FieldOption {
 	return func(a *fieldAnnotation) {
 		a.Type = fieldType
 		a.TypeRepeated = len(repeated) > 0 && repeated[0]
+	}
+}
+
+func WithFieldProtoEnum(isEnum bool, values map[string]int32) FieldOption {
+	return func(a *fieldAnnotation) {
+		a.ProtoEnum = isEnum
+		a.ProtoEnumValue = values
 	}
 }
 

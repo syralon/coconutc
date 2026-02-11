@@ -20,7 +20,10 @@ func (User) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name"),
 		field.Int("group_id").Optional(),
-		field.Int("status").Annotations(entproto.Field(entproto.WithFieldSettable(true))),
+		field.Int("status").Annotations(entproto.Field(entproto.WithFieldSettable(true), entproto.WithFieldProtoEnum(true, map[string]int32{
+			"ENABLED":  1,
+			"DISABLED": 2,
+		}))),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now).Immutable(),
 	}

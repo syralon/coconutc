@@ -3,6 +3,7 @@ package entproto
 import (
 	"entgo.io/ent/entc/gen"
 	"entgo.io/ent/schema/field"
+	"github.com/iancoleman/strcase"
 	"github.com/jhump/protoreflect/v2/protobuilder"
 	cocofield "github.com/syralon/coconut/proto/syralon/coconut/field"
 	"github.com/syralon/coconutc/pkg/annotation/entproto"
@@ -44,7 +45,7 @@ var (
 		field.TypeJSON:    protobuilder.FieldTypeImportedMessage((&cocofield.BytesField{}).ProtoReflect().Descriptor()),
 		field.TypeUUID:    protobuilder.FieldTypeImportedMessage((&cocofield.StringField{}).ProtoReflect().Descriptor()),
 		field.TypeBytes:   protobuilder.FieldTypeImportedMessage((&cocofield.BytesField{}).ProtoReflect().Descriptor()),
-		field.TypeEnum:    protobuilder.FieldTypeImportedMessage((&cocofield.Int32Field{}).ProtoReflect().Descriptor()),
+		field.TypeEnum:    protobuilder.FieldTypeImportedMessage((&cocofield.StringField{}).ProtoReflect().Descriptor()), // ent is treated enum as string
 		field.TypeString:  protobuilder.FieldTypeImportedMessage((&cocofield.StringField{}).ProtoReflect().Descriptor()),
 		field.TypeInt8:    protobuilder.FieldTypeImportedMessage((&cocofield.Int32Field{}).ProtoReflect().Descriptor()),
 		field.TypeInt16:   protobuilder.FieldTypeImportedMessage((&cocofield.Int32Field{}).ProtoReflect().Descriptor()),
@@ -71,24 +72,34 @@ func (m typeMapping) Mapping(t field.Type) *protobuilder.FieldType {
 	return m[t]
 }
 
-func NewField(name string, field *gen.Field, mapping TypeMapping) (*protobuilder.FieldBuilder, error) {
-	fieldOpts, err := entproto.GetFieldOptions(field.Annotations)
+func NewField(ctx *Context, name string, node *gen.Type, nodeField *gen.Field, mapping TypeMapping, skipProtoEnum ...bool) (*protobuilder.FieldBuilder, error) {
+	opts, err := entproto.GetFieldOptions(nodeField.Annotations)
 	if err != nil {
 		return nil, err
 	}
-	t := fieldOpts.Type
-	if t == 0 {
-		t = field.Type.Type
+	var typ *protobuilder.FieldType
+	switch {
+	case opts.Type > 0:
+		typ = mapping.Mapping(opts.Type)
+	case opts.ProtoEnum && (len(skipProtoEnum) == 0 || !skipProtoEnum[0]):
+		enumName := strcase.ToScreamingSnake(node.Name + "_" + nodeField.Name)
+		en, err := ctx.GetEnum(protoreflect.Name(enumName))
+		if err != nil {
+			return nil, err
+		}
+		typ = protobuilder.FieldTypeEnum(en)
+	default:
+		typ = mapping.Mapping(nodeField.Type.Type)
 	}
-	fi := protobuilder.NewField(protoreflect.Name(name), mapping.Mapping(t))
-	if fieldOpts.TypeRepeated {
+	fi := protobuilder.NewField(protoreflect.Name(name), typ)
+	if opts.TypeRepeated {
 		fi.SetRepeated()
 	}
 	return fi, nil
 }
 
-func MustNewField(name string, field *gen.Field, mapping TypeMapping) *protobuilder.FieldBuilder {
-	fi, err := NewField(name, field, mapping)
+func MustNewField(ctx *Context, name string, node *gen.Type, nodeField *gen.Field, mapping TypeMapping, skipProtoEnum ...bool) *protobuilder.FieldBuilder {
+	fi, err := NewField(ctx, name, node, nodeField, mapping, skipProtoEnum...)
 	if err != nil {
 		panic(err)
 	}
