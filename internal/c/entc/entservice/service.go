@@ -128,7 +128,7 @@ func (b *serviceBuilder) get() {
 		list("data", "err"),
 		[]jen.Code{
 			jen.Id("ctx"),
-			entType(b.node.IDType.Type, jen.Id("request").Dot("GetId").Call()),
+			entType(b.node.IDType.Type, jen.Id("request").Dot("GetId").Call(), nil),
 		},
 		[]jen.Code{
 			jen.Id("Data").Op(":").Qual(b.entityPackage, fmt.Sprintf("%sToProto", b.node.Name)).Call(jen.Id("data")).Op(","),
@@ -169,7 +169,7 @@ func (b *serviceBuilder) update() {
 		jen.Err(),
 		[]jen.Code{
 			jen.Id("ctx"),
-			entType(b.node.IDType.Type, jen.Id("request").Dot("GetId").Call()),
+			entType(b.node.IDType.Type, jen.Id("request").Dot("GetId").Call(), nil),
 			jen.Id("request").Dot("GetUpdate").Call(),
 		},
 		[]jen.Code{},
@@ -182,7 +182,7 @@ func (b *serviceBuilder) delete() {
 		jen.Err(),
 		[]jen.Code{
 			jen.Id("ctx"),
-			entType(b.node.IDType.Type, jen.Id("request").Dot("GetId").Call()),
+			entType(b.node.IDType.Type, jen.Id("request").Dot("GetId").Call(), nil),
 		},
 		[]jen.Code{},
 	)
@@ -210,8 +210,13 @@ func (b *serviceBuilder) set() {
 			jen.Err(),
 			[]jen.Code{
 				jen.Id("ctx"),
-				entType(b.node.IDType.Type, jen.Id("request").Dot("GetId").Call()),
-				entType(v.Type.Type, jen.Id("request").Dot("Get"+text.ProtoPascal(v.Name)).Call()),
+				entType(b.node.IDType.Type, jen.Id("request").Dot("GetId").Call(), nil),
+				func() jen.Code {
+					if fieldOpts.ProtoEnum {
+						return jen.Id("request").Dot("Get" + text.ProtoPascal(v.Name)).Call()
+					}
+					return entType(v.Type.Type, jen.Id("request").Dot("Get"+text.ProtoPascal(v.Name)).Call(), nil)
+				}(),
 			},
 			[]jen.Code{},
 		)
@@ -233,7 +238,7 @@ func (b *serviceBuilder) edges() {
 				list("data", "err"),
 				[]jen.Code{
 					jen.Id("ctx"),
-					entType(edge.Type.IDType.Type, jen.Id("request").Dot("GetId").Call()),
+					entType(edge.Type.IDType.Type, jen.Id("request").Dot("GetId").Call(), nil),
 				},
 				[]jen.Code{
 					jen.Id("Data").Op(":").Qual(b.entityPackage, fmt.Sprintf("%sToProto", edge.Type.Name)).Call(jen.Id("data")).Op(","),
@@ -245,7 +250,7 @@ func (b *serviceBuilder) edges() {
 				list("data", "paginator", "err"),
 				[]jen.Code{
 					jen.Id("ctx"),
-					entType(edge.Type.IDType.Type, jen.Id("request").Dot("GetId").Call()),
+					entType(edge.Type.IDType.Type, jen.Id("request").Dot("GetId").Call(), nil),
 					jen.Id("request").Dot("GetOptions").Call(),
 					jen.Id("request").Dot("GetPaginator").Call(),
 				},

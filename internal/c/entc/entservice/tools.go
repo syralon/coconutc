@@ -77,17 +77,17 @@ func unwrapProto(f *gen.Field, v *jen.Statement) *jen.Statement {
 // convert original type to wrapped type
 // var s string
 // val := example.CustomString(s)
-func wrap(f *gen.Field, v *jen.Statement, opt entproto.FieldOptions) *jen.Statement {
-	if opt.ProtoEnum {
-		return jen.Id(f.Type.Type.String()).Call(v)
-	}
+func wrap(f *gen.Field, v *jen.Statement, opt *entproto.FieldOptions) *jen.Statement {
 	if f.Type.RType == nil || f.Type.RType.PkgPath == "" {
-		return entType(f.Type.Type, v)
+		return entType(f.Type.Type, v, opt)
 	}
 	return jen.Qual(f.Type.RType.PkgPath, f.Type.RType.Name).Call(v)
 }
 
-func entType(t field.Type, v *jen.Statement) *jen.Statement {
+func entType(t field.Type, v *jen.Statement, opt *entproto.FieldOptions) *jen.Statement {
+	if opt != nil && opt.ProtoEnum {
+		return jen.Id(t.String()).Call(v)
+	}
 	switch t {
 	case field.TypeInt8,
 		field.TypeInt16,
