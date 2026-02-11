@@ -77,9 +77,6 @@ func toProtoFunc(file *jen.File, node *gen.Type, opts *BuildOptions, withEdge bo
 		Params(jen.Id("data").Op("*").Id(node.Name)).Id("ToProto").
 		Params().Op("*").Qual(opts.ProtoPackage, text.ProtoPascal(node.Name)).
 		Block(
-			jen.If(jen.Id("data").Op("==").Nil()).Block(
-				jen.Return(jen.Nil()),
-			),
 			jen.If(jen.Id("data").Op("==").Nil()).Block(jen.Return(jen.Nil())),
 			jen.Return(
 				jen.Op("&").Qual(opts.ProtoPackage, text.ProtoPascal(node.Name)).Block(fields...),
