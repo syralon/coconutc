@@ -71,6 +71,9 @@ func toProtoFunc(file *jen.File, node *gen.Type, opts *BuildOptions, withEdge bo
 		Params(jen.Id("data").Op("*").Id(node.Name)).Id("ToProto").
 		Params().Op("*").Qual(opts.ProtoPackage, text.ProtoPascal(node.Name)).
 		Block(
+			jen.If(jen.Id("data").Op("==").Nil()).Block(
+				jen.Return(jen.Nil()),
+			),
 			jen.If(jen.Id("data").Op("==").Nil()).Block(jen.Return(jen.Nil())),
 			jen.Return(
 				jen.Op("&").Qual(opts.ProtoPackage, text.ProtoPascal(node.Name)).Block(fields...),
@@ -103,7 +106,12 @@ func newEntityFunc(file *jen.File, node *gen.Type, opts *BuildOptions) {
 	file.Func().Id(fmt.Sprintf("New%s", node.Name)).
 		Params(jen.Id("data").Op("*").Qual(opts.EntPackage, node.Name)).
 		Params(jen.Op("*").Id(node.Name)).
-		Block(jen.Return(
-			jen.Op("&").Id(node.Name).Block(jen.Id(node.Name).Op(":").Id("data").Op(",")),
-		))
+		Block(
+			jen.If(jen.Id("data").Op("==").Nil()).Block(
+				jen.Return(jen.Nil()),
+			),
+			jen.Return(
+				jen.Op("&").Id(node.Name).Block(jen.Id(node.Name).Op(":").Id("data").Op(",")),
+			),
+		)
 }
