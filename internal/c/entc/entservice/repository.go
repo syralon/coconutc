@@ -308,6 +308,11 @@ func (b *repositoryBuilder) create() {
 	defer b.file.Line()
 	create := define("op").Id("rep").Dot(b.node.Name).Call(jen.Id("ctx")).Dot("Create()")
 	for _, v := range b.node.Fields {
+		fieldOpts, err := entproto.GetFieldOptions(v.Annotations)
+		if err != nil {
+			return
+		}
+
 		if v.Name == "created_at" || v.Name == "updated_at" {
 			continue
 		}
@@ -315,7 +320,7 @@ func (b *repositoryBuilder) create() {
 		if v.Type.Type == field.TypeTime {
 			val = val.Dot("AsTime()")
 		}
-		val = wrap(v, val)
+		val = wrap(v, val, fieldOpts)
 		create = create.Op(".").Id("\n").Id(fmt.Sprintf("Set%s", text.EntPascal(v.Name))).Call(val)
 	}
 
@@ -352,7 +357,7 @@ func (b *repositoryBuilder) update() {
 		if v.Type.Type == field.TypeTime {
 			val = val.Dot("AsTime()")
 		}
-		val = wrap(v, val)
+		val = wrap(v, val, fieldOpts)
 		fields = append(
 			fields,
 			jen.If(jen.Id("data").Dot(text.ProtoPascal(v.Name)).Op("!=").Nil()).Block(
