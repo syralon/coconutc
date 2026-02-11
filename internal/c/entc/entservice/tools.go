@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent/entc/gen"
 	"entgo.io/ent/schema/field"
 	"github.com/dave/jennifer/jen"
+	"github.com/syralon/coconutc/pkg/annotation/entproto"
 )
 
 func chain(names ...string) *jen.Statement {
@@ -76,41 +77,26 @@ func unwrapProto(f *gen.Field, v *jen.Statement) *jen.Statement {
 // convert original type to wrapped type
 // var s string
 // val := example.CustomString(s)
-func wrap(f *gen.Field, v *jen.Statement) *jen.Statement {
+func wrap(f *gen.Field, v *jen.Statement, opt *entproto.FieldOptions) *jen.Statement {
 	if f.Type.RType == nil || f.Type.RType.PkgPath == "" {
-		return entType(f.Type.Type, v)
+		return entType(f.Type.Type, v, opt)
 	}
 	return jen.Qual(f.Type.RType.PkgPath, f.Type.RType.Name).Call(v)
 }
 
-func entType(t field.Type, v *jen.Statement) *jen.Statement {
+func entType(t field.Type, v *jen.Statement, opt *entproto.FieldOptions) *jen.Statement {
+	if opt != nil && opt.ProtoEnum {
+		return jen.Id(t.String()).Call(v)
+	}
 	switch t {
-	case field.TypeInt8:
-		return jen.Int8().Call(v)
-	case field.TypeInt16:
-		return jen.Int16().Call(v)
-	case field.TypeInt32:
-		return v
-	case field.TypeInt:
-		return jen.Int().Call(v)
-	case field.TypeInt64:
-		return v
-	case field.TypeUint8:
-		return jen.Uint8().Call(v)
-	case field.TypeUint16:
-		return jen.Uint16().Call(v)
-	case field.TypeUint32:
-		return v
-	case field.TypeUint:
-		return jen.Uint().Call(v)
-	case field.TypeUint64:
-		return v
-	case field.TypeString:
-		return v
-	case field.TypeUUID:
-		return v
+	case field.TypeInt8,
+		field.TypeInt16,
+		field.TypeInt,
+		field.TypeUint8,
+		field.TypeUint16,
+		field.TypeUint:
+		return jen.Id(t.String()).Call(v)
 	default:
-		//panic(fmt.Errorf("unsupported ent id type: %s", n.ID.Type.Type))
 		return v
 	}
 }

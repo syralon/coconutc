@@ -122,12 +122,16 @@ func (b *repositoryBuilder) fnDelete() *jen.Statement {
 		Call(jen.Error())
 }
 
-func (b *repositoryBuilder) fnSet(v *gen.Field) *jen.Statement {
+func (b *repositoryBuilder) fnSet(v *gen.Field, opts entproto.FieldOptions) *jen.Statement {
+	typ := jen.Id(v.Type.String())
+	if opts.ProtoEnum {
+		typ = jen.Qual(b.ProtoPackage, strcase.ToScreamingSnake(b.node.Name+"_"+v.Name))
+	}
 	return jen.Id(fmt.Sprintf("Set%s", text.ProtoPascal(v.Name))).
 		Params(
 			jen.Id("ctx").Qual("context", "Context"),
 			jen.Id("id").Id(b.node.IDType.Type.String()),
-			jen.Id("value").Id(v.Type.String()),
+			jen.Id("value").Add(typ),
 		).Error()
 
 }
@@ -177,10 +181,10 @@ func (b *repositoryBuilder) set() {
 		}
 		fnName := fmt.Sprintf("Set%s", text.ProtoPascal(v.Name))
 
-		b.fn(b.fnSet(v)).
+		b.fn(b.fnSet(v, fieldOpts)).
 			Block(
 				define("_", "err").Id("rep").Dot(b.node.Name).Call(jen.Id("ctx")).Dot("Update").Call().
-					Dot(fnName).Call(entType(v.Type.Type, jen.Id("value"))).Dot("Save").Call(jen.Id("ctx")),
+					Dot(fnName).Call(entType(v.Type.Type, jen.Id("value"), &fieldOpts)).Dot("Save").Call(jen.Id("ctx")),
 				jen.Return(jen.Err()),
 			).Line()
 	}
@@ -308,6 +312,11 @@ func (b *repositoryBuilder) create() {
 	defer b.file.Line()
 	create := define("op").Id("rep").Dot(b.node.Name).Call(jen.Id("ctx")).Dot("Create()")
 	for _, v := range b.node.Fields {
+		fieldOpts, err := entproto.GetFieldOptions(v.Annotations)
+		if err != nil {
+			return
+		}
+
 		if v.Name == "created_at" || v.Name == "updated_at" {
 			continue
 		}
@@ -315,7 +324,7 @@ func (b *repositoryBuilder) create() {
 		if v.Type.Type == field.TypeTime {
 			val = val.Dot("AsTime()")
 		}
-		val = wrap(v, val)
+		val = wrap(v, val, &fieldOpts)
 		create = create.Op(".").Id("\n").Id(fmt.Sprintf("Set%s", text.EntPascal(v.Name))).Call(val)
 	}
 
@@ -352,7 +361,7 @@ func (b *repositoryBuilder) update() {
 		if v.Type.Type == field.TypeTime {
 			val = val.Dot("AsTime()")
 		}
-		val = wrap(v, val)
+		val = wrap(v, val, &fieldOpts)
 		fields = append(
 			fields,
 			jen.If(jen.Id("data").Dot(text.ProtoPascal(v.Name)).Op("!=").Nil()).Block(
@@ -485,7 +494,7 @@ func RepositoryInterfaceBuilder(pkgName, entityPkg string) BuildFunc {
 			if fieldOpts.Immutable || !fieldOpts.Settable {
 				continue
 			}
-			funcs = append(funcs, b.fnSet(v))
+			funcs = append(funcs, b.fnSet(v, fieldOpts))
 		}
 
 		for _, edge := range b.node.Edges {
