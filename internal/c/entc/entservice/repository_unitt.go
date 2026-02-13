@@ -172,11 +172,15 @@ func (b *repositoryUnitTestBuilder) list() jen.Code {
 					b.mockData().Op(","),
 					b.mockData().Op(","),
 				),
+				// created := make([]*entity.Example, 0, len(testData))
 				// for _, create := range testData {}
+				define("created").Make(jen.Index().Op("*").Qual(b.entityPackage, b.node.Name), jen.Lit(0), jen.Len(jen.Id("testData"))),
 				jen.For(jen.Id("_").Op(",").Id("create").Op(":=").Range().Id("testData")).Block(
-					define("_", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
+					define("v", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
 					jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Err()),
+					assign("created").Append(jen.Id("created"), jen.Id("v")),
 				),
+				jen.Qual(pkgTestifyAssert, "Len").Call(jen.Id("t"), jen.Id("created"), jen.Len(jen.Id("testData"))),
 				jen.Line(),
 				// tests := []ExampleListAssert{}
 				define("tests").Op("[]").Id(fmt.Sprintf("%sListAssert", b.node.Name)).Block(b.listTestCases()),
@@ -645,9 +649,53 @@ func (b *repositoryUnitTestBuilder) allowEmptyCreate() bool {
 }
 
 func (b *repositoryUnitTestBuilder) listTestCases() jen.Code {
-	codes := jen.Statement{}
-	codes = append(
-		codes,
+	var options []jen.Code
+	for _, v := range b.node.Fields {
+		if v.Sensitive() {
+			continue
+		}
+		fieldOpts, err := entproto.GetFieldOptions(v.Annotations)
+		if err != nil {
+			panic(err)
+		}
+		if !fieldOpts.Filterable {
+			continue
+		}
+
+		t := v.Type.Type
+		if fieldOpts.Type > 0 {
+			t = fieldOpts.Type
+		}
+		var typeName string
+		switch t {
+		case field.TypeTime:
+			typeName = "Timestamp"
+		case field.TypeInt8, field.TypeInt16, field.TypeInt32:
+			typeName = "Int32"
+		case field.TypeInt, field.TypeInt64:
+			typeName = "Int64"
+		case field.TypeUint8, field.TypeUint32:
+			typeName = "Uint32"
+		case field.TypeUint, field.TypeUint64:
+			typeName = "Uint64"
+		case field.TypeFloat32:
+			typeName = "Float"
+		case field.TypeFloat64:
+			typeName = "Double"
+		default:
+			typeName = strcase.ToCamel(t.String())
+		}
+		var val jen.Code
+		if fieldOpts.TypeRepeated {
+			//TODO repeated field cant be filtered
+			continue
+		} else {
+			val = jen.Qual(pkgCoconutField, "New"+typeName).Call(jen.Id("created").Index(jen.Lit(0)).Dot(text.EntPascal(v.Name)))
+		}
+		item := jen.Id(text.ProtoPascal(v.Name)).Op(":").Add(val).Op(",")
+		options = append(options, item)
+	}
+	return segments(
 		jen.Block(
 			jen.Id("name").Op(":").Lit("list all without pagination").Op(","),
 			jen.Id("options").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Options").Block().Op(","),
@@ -669,8 +717,14 @@ func (b *repositoryUnitTestBuilder) listTestCases() jen.Code {
 			jen.Id("wantCount").Op(":").Lit(1).Op(","),
 			jen.Id("wantError").Op(":").False().Op(","),
 		).Op(","),
+		jen.Block(
+			jen.Id("name").Op(":").Lit("list with options").Op(","),
+			jen.Id("options").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Options").Block(options...).Op(","),
+			jen.Id("paginator").Op(":").Nil().Op(","),
+			jen.Id("wantCount").Op(":").Lit(1).Op(","),
+			jen.Id("wantError").Op(":").False().Op(","),
+		).Op(","),
 	)
-	return &codes
 }
 
 func (b *repositoryUnitTestBuilder) assertEqualGetFields() jen.Code {
@@ -743,6 +797,10 @@ func (b *repositoryUnitTestBuilder) assertEqualUpdateFields() jen.Code {
 		jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Err()),
 		segments(fields...),
 	)
+}
+
+func (b *repositoryUnitTestBuilder) filterFields() {
+
 }
 
 func (b *repositoryUnitTestBuilder) mockData(ptr ...bool) *jen.Statement {

@@ -270,7 +270,11 @@ func (b *repositoryBuilder) list() {
 	defer b.file.Line()
 	paginatorName := b.APIOptions.PaginatorStyle.String()
 
-	var fields []*jen.Statement
+	fields := []*jen.Statement{
+		jen.Id("options").Dot("GetId").Call().Dot("Selector").Call(
+			jen.Qual(path.Join(b.EntPackage, strings.ToLower(b.node.Name)), "FieldID"),
+		),
+	}
 	for _, v := range b.node.Fields {
 		fieldOpts, err := entproto.GetFieldOptions(v.Annotations)
 		if err != nil {
