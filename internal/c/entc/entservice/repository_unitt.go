@@ -54,24 +54,13 @@ type repositoryUnitTestBuilder struct {
 
 func (b *repositoryUnitTestBuilder) build(ctx context.Context) error {
 	b.file.Add(segments(
-		b.getAssertStruct(),
 		b.get(),
-
-		b.listAssertStruct(),
 		b.list(),
-
-		b.createAssertStruct(),
 		b.create(),
-
-		b.updateAssertStruct(),
 		b.update(),
-
-		b.deleteAssertStruct(),
 		b.delete(),
-
-		b.setAssertStruct(),
 		b.set(),
-
+		b.listEdges(),
 		b.integration(),
 		b.errorHandling(),
 	))
@@ -93,107 +82,341 @@ func (b *repositoryUnitTestBuilder) head() jen.Code {
 }
 
 func (b *repositoryUnitTestBuilder) get() jen.Code {
-	return jen.Func().Id(fmt.Sprintf("Test%s_Get", b.name)).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).
-		Block(
-			b.head(),
-			jen.Line(),
-			b.getBody(),
-		)
-}
+	return segments(
+		jen.Type().Id(fmt.Sprintf("%sGetAssert", b.node.Name)).Struct(
+			jen.Id("name").String(),
+			jen.Id("id").Id(b.node.ID.Type.String()),
+			jen.Id("want").Op("*").Qual(b.entityPackage, b.node.Name),
+			jen.Id("wantError").Bool(),
+		).Line(),
+		jen.Func().Id(fmt.Sprintf("Test%s_Get", b.name)).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).
+			Block(
+				b.head(),
+				jen.Line(),
+				jen.Comment("Create test data"),
 
-func (b *repositoryUnitTestBuilder) list() jen.Code {
-	return jen.Func().Id(fmt.Sprintf("Test%s_List", b.name)).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).
-		Block(
-			b.head(),
-			jen.Line(),
-			b.listBody(),
-		)
-}
+				// create := &pb.ExampleCreate{}
+				// created, err := repo.Create(ctx, create)
+				// require.NoError(t ,err)
+				// require.NotNil(t, created)
+				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()),
+				define("created", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
+				jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
+				jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created")),
 
-func (b *repositoryUnitTestBuilder) create() jen.Code {
-	return jen.Func().Id(fmt.Sprintf("Test%s_Create", b.name)).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).
-		Block(
-			b.head(),
-			jen.Line(),
-			b.createBody(),
-		)
+				// tests := []ExampleGetAssert{}
+				define("tests").Op("[]").Id(fmt.Sprintf("%sGetAssert", b.node.Name)).Block(
+					jen.Block(
+						jen.Id("name").Op(":").Lit("successful get").Op(","),
+						jen.Id("id").Op(":").Id("created").Dot("ID").Op(","),
+						jen.Id("want").Op(":").Id("created").Op(","),
+						jen.Id("wantError").Op(":").False().Op(","),
+					).Op(","),
+					jen.Block(
+						jen.Id("name").Op(":").Lit("not found").Op(","),
+						jen.Id("id").Op(":").Lit(99999).Op(","),
+						jen.Id("want").Op(":").Nil().Op(","),
+						jen.Id("wantError").Op(":").True().Op(","),
+					).Op(","),
+					jen.Block(
+						jen.Id("name").Op(":").Lit("invalid id").Op(","),
+						jen.Id("id").Op(":").Lit(-1).Op(","),
+						jen.Id("want").Op(":").Nil().Op(","),
+						jen.Id("wantError").Op(":").True().Op(","),
+					).Op(","),
+				),
 
-}
-
-func (b *repositoryUnitTestBuilder) update() jen.Code {
-	return jen.Func().Id(fmt.Sprintf("Test%s_Update", b.name)).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).
-		Block(
-			b.head(),
-			jen.Line(),
-			b.updateBody(),
-		)
-}
-
-func (b *repositoryUnitTestBuilder) delete() jen.Code {
-	return jen.Func().Id(fmt.Sprintf("Test%s_Delete", b.name)).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).
-		Block(
-			b.head(),
-			jen.Line(),
-			jen.Comment("Create test data"),
-
-			// create := &pb.ExampleCreate{}
-			// created, err := repo.Create(ctx, create)
-			// require.NoError(t ,err)
-			// require.NotNil(t, created)
-			define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()),
-			define("created", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
-			jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
-			jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created")),
-			jen.Line(),
-
-			// tests := []ExampleDeleteAssert{}
-			define("tests").Op("[]").Id(fmt.Sprintf("%sDeleteAssert", b.node.Name)).Block(
-				jen.Block(
-					jen.Id("name").Op(":").Lit("successful delete").Op(","),
-					jen.Id("id").Op(":").Id("created").Dot("ID").Op(","),
-					jen.Id("wantError").Op(":").False().Op(","),
-				).Op(","),
-				jen.Block(
-					jen.Id("name").Op(":").Lit("delete non-existent").Op(","),
-					jen.Id("id").Op(":").Lit(99999).Op(","),
-					jen.Id("wantError").Op(":").True().Op(","),
-				).Op(","),
-				jen.Block(
-					jen.Id("name").Op(":").Lit("delete already deleted").Op(","),
-					jen.Id("id").Op(":").Id("created").Dot("ID").Op(",").Comment("// Already deleted above"),
-					jen.Id("wantError").Op(":").True().Op(","),
-				).Op(","),
-				jen.Block(
-					jen.Id("name").Op(":").Lit("delete with invalid id").Op(","),
-					jen.Id("id").Op(":").Lit(-1).Op(","),
-					jen.Id("wantError").Op(":").True().Op(","),
-				).Op(","),
-			),
-
-			// for _, tt := range tests {}
-			jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
-				// t.Run(tt.name, func(t *testing.T)) {}
-				jen.Id("t").Dot("Run").Call(
-					jen.Id("tt").Dot("name"),
-					jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
-						define("err").Id("repo").Dot("Delete").Call(jen.Id("ctx"), jen.Id("tt").Dot("id")),
-						jen.If(jen.Id("tt").Dot("wantError")).
-							Block(jen.Qual(pkgTestifyAssert, "Error").Call(jen.Id("t"), jen.Err())).
-							Else().
-							Block(
-								jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Err()),
-								jen.Comment(" Verify deletion"),
-								define("_", "err").Id("repo").Dot("Get").Call(jen.Id("ctx"), jen.Id("tt").Dot("id")),
-								jen.Qual(pkgTestifyAssert, "Error").Call(jen.Id("t"), jen.Err()).Comment("Should not find the record"),
-							),
+				// for _, tt := range tests {}
+				jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
+					// t.Run(tt.name, func(t *testing.T)) {}
+					jen.Id("t").Dot("Run").Call(
+						jen.Id("tt").Dot("name"),
+						jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
+							// got, err := repo.Get(ctx, tt.id)
+							define("got", "err").Id("repo").Dot("Get").Call(jen.Id("ctx"), jen.Id("tt").Dot("id")),
+							jen.If(jen.Id("tt").Dot("wantError")).
+								Block(
+									jen.Qual(pkgTestifyAssert, "Error").Call(jen.Id("t"), jen.Err()),
+									jen.Qual(pkgTestifyAssert, "Nil").Call(jen.Id("t"), jen.Id("got")),
+								).
+								Else().
+								Block(
+									jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Err()),
+									jen.Qual(pkgTestifyAssert, "NotNil").Call(jen.Id("t"), jen.Id("got")),
+									jen.Add(b.assertEqualGetFields()),
+								),
+						),
 					),
 				),
 			),
-		)
+	)
+}
+
+func (b *repositoryUnitTestBuilder) list() jen.Code {
+	return segments(
+		jen.Type().Id(fmt.Sprintf("%sListAssert", b.node.Name)).Struct(
+			jen.Id("name").String(),
+			jen.Id("options").Op("*").Qual(b.ProtoPackage, b.node.Name+"Options"),
+			jen.Id("paginator").Op("*").Qual(pkgCoconutField, "ClassicalPaginator"), // TODO
+			jen.Id("wantCount").Int(),
+			jen.Id("wantError").Bool(),
+		).Line(),
+		jen.Func().Id(fmt.Sprintf("Test%s_List", b.name)).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).
+			Block(
+				b.head(),
+				jen.Line(),
+				jen.Comment("Create test data"),
+				// testData := []*pb.ExampleCreate{}
+				define("testData").Op("[]").Op("*").Qual(b.ProtoPackage, b.node.Name+"Create").Block(
+					b.mockData().Op(","),
+					b.mockData().Op(","),
+					b.mockData().Op(","),
+				),
+				// for _, create := range testData {}
+				jen.For(jen.Id("_").Op(",").Id("create").Op(":=").Range().Id("testData")).Block(
+					define("_", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
+					jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Err()),
+				),
+				jen.Line(),
+				// tests := []ExampleListAssert{}
+				define("tests").Op("[]").Id(fmt.Sprintf("%sListAssert", b.node.Name)).Block(b.listTestCases()),
+				// for _, tt := range tests {}
+				jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
+					jen.Id("t").Dot("Run").Call(jen.Id("tt").Dot("name"), jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
+						define("got", "paginator", "err").Id("repo").Dot("List").Call(jen.Id("ctx"), jen.Id("tt").Dot("options"), jen.Id("tt").Dot("paginator")),
+						jen.If(jen.Id("tt").Dot("wantError")).
+							Block(jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Id("err"))).
+							Else().
+							Block(
+								jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Id("err")),
+								jen.Qual(pkgTestifyAssert, "Equal").Call(jen.Id("t"), jen.Id("tt").Dot("wantCount"), jen.Len(jen.Id("got"))),
+								jen.If(jen.Id("tt").Dot("paginator").Op("!=").Nil()).Block(
+									jen.Qual(pkgTestifyAssert, "NotNil").Call(jen.Id("t"), jen.Id("paginator")),
+									jen.Qual(pkgTestifyAssert, "Equal").Call(jen.Id("t"), jen.Int64().Call(jen.Lit(3)), jen.Id("paginator").Dot("Total")),
+								),
+							),
+					)),
+				),
+			),
+	)
+}
+
+func (b *repositoryUnitTestBuilder) create() jen.Code {
+	return segments(
+		jen.Type().Id(fmt.Sprintf("%sCreateAssert", b.node.Name)).Struct(
+			jen.Id("name").String(),
+			jen.Id("create").Op("*").Qual(b.ProtoPackage, b.node.Name+"Create"),
+			jen.Id("wantError").Bool(),
+		).Line(),
+		jen.Func().Id(fmt.Sprintf("Test%s_Create", b.name)).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).
+			Block(
+				b.head(),
+				jen.Line(),
+				define("tests").Op("[]").Id(fmt.Sprintf("%sCreateAssert", b.node.Name)).Block(
+					jen.Block(
+						jen.Id("name").Op(":").Lit("successful create with all fields").Op(","),
+						jen.Id("create").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()).Op(","),
+						jen.Id("wantError").Op(":").False().Op(","),
+					).Op(","),
+					jen.Block(
+						jen.Id("name").Op(":").Lit("create with empty fields").Op(","),
+						jen.Id("create").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Block().Op(","),
+						jen.Id("wantError").Op(":").Lit(!b.allowEmptyCreate()).Op(",").Comment(" If the entity contains bytes field, the create may be failed with empty data"),
+					).Op(","),
+				),
+
+				// for _, tt := range tests {}
+				jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
+					// t.Run(tt.name, func(t *testing.T)) {}
+					jen.Id("t").Dot("Run").Call(
+						jen.Id("tt").Dot("name"),
+						jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
+							// got, err := repo.Get(ctx, tt.id)
+							define("got", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("tt").Dot("create")),
+							// if tt.wantError {} else {}
+							jen.If(jen.Id("tt").Dot("wantError")).
+								Block(
+									jen.Qual(pkgTestifyAssert, "Error").Call(jen.Id("t"), jen.Err()),
+									jen.Qual(pkgTestifyAssert, "Nil").Call(jen.Id("t"), jen.Id("got")),
+								).
+								Else().
+								Block(
+									jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Err()),
+									jen.Qual(pkgTestifyAssert, "NotNil").Call(jen.Id("t"), jen.Id("got")),
+									jen.Add(b.assertEqualCreateFields()),
+									jen.Qual(pkgTestifyAssert, "NotZero").Call(jen.Id("t"), jen.Id("got").Dot("CreatedAt")),
+									jen.Qual(pkgTestifyAssert, "NotZero").Call(jen.Id("t"), jen.Id("got").Dot("UpdatedAt")),
+								),
+						),
+					),
+				),
+			),
+	)
+}
+
+func (b *repositoryUnitTestBuilder) update() jen.Code {
+	return segments(
+		jen.Type().Id(fmt.Sprintf("%sUpdateAssert", b.node.Name)).Struct(
+			jen.Id("name").String(),
+			jen.Id("id").Id(b.node.ID.Type.String()),
+			jen.Id("update").Op("*").Qual(b.ProtoPackage, b.node.Name+"Update"),
+			jen.Id("wantError").Bool(),
+		).Line(),
+		jen.Func().Id(fmt.Sprintf("Test%s_Update", b.name)).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).
+			Block(
+				b.head(),
+				jen.Line(),
+				jen.Comment("Create test data"),
+
+				// create := &pb.ExampleCreate{}
+				// created, err := repo.Create(ctx, create)
+				// require.NoError(t ,err)
+				// require.NotNil(t, created)
+				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()),
+				define("created", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
+				jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
+				jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created")),
+
+				jen.Line(),
+
+				define("now").Qual(pkgTime, "Now").Call(),
+				define("timestamp").Qual(pkgTimestamppb, "New").Call(jen.Id("now")),
+
+				jen.Line(),
+
+				// tests := []ExampleUpdateAssert{}
+				define("tests").Op("[]").Id(fmt.Sprintf("%sUpdateAssert", b.node.Name)).Block(
+					jen.Block(
+						jen.Id("name").Op(":").Lit("update all fields").Op(","),
+						jen.Id("id").Op(":").Id("created").Dot("ID").Op(","),
+						jen.Id("update").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Update").Add(b.mockData(true)).Op(","),
+						jen.Id("wantError").Op(":").False().Op(","),
+					).Op(","),
+					jen.Block(
+						jen.Id("name").Op(":").Lit("update with timestamps").Op(","),
+						jen.Id("id").Op(":").Id("created").Dot("ID").Op(","),
+						jen.Id("update").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Update").Block(
+							jen.Id("CreatedAt").Op(":").Id("timestamp").Op(","),
+							jen.Id("UpdatedAt").Op(":").Id("timestamp").Op(","),
+						).Op(","),
+						jen.Id("wantError").Op(":").False().Op(","),
+					).Op(","),
+					jen.Block(
+						jen.Id("name").Op(":").Lit("update no-existent record").Op(","),
+						jen.Id("id").Op(":").Lit(99999).Op(","),
+						jen.Id("update").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Update").Add(b.mockData(true)).Op(","),
+						jen.Id("wantError").Op(":").True().Op(","),
+					).Op(","),
+					jen.Block(
+						jen.Id("name").Op(":").Lit("update with empty data").Op(","),
+						jen.Id("id").Op(":").Id("created").Dot("ID").Op(","),
+						jen.Id("update").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Update").Block().Op(","),
+						jen.Id("wantError").Op(":").False().Op(",").Comment("no error, no changes"),
+					).Op(","),
+				),
+
+				// for _, tt := range tests {}
+				jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
+					// t.Run(tt.name, func(t *testing.T)) {}
+					jen.Id("t").Dot("Run").Call(
+						jen.Id("tt").Dot("name"),
+						jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
+							define("err").Id("repo").Dot("Update").Call(jen.Id("ctx"), jen.Id("tt").Dot("id"), jen.Id("tt").Dot("update")),
+							jen.If(jen.Id("tt").Dot("wantError")).
+								Block(jen.Qual(pkgTestifyAssert, "Error").Call(jen.Id("t"), jen.Err())).
+								Else().
+								Block(
+									jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Err()),
+									jen.Comment("// Verify update if not expecting error and ID exists"),
+									b.assertEqualUpdateFields(),
+								),
+						),
+					),
+				),
+			),
+	)
+}
+
+func (b *repositoryUnitTestBuilder) delete() jen.Code {
+	return segments(
+		jen.Type().Id(fmt.Sprintf("%sDeleteAssert", b.node.Name)).Struct(
+			jen.Id("name").String(),
+			jen.Id("id").Id(b.node.ID.Type.String()),
+			jen.Id("wantError").Bool(),
+		).Line(),
+
+		jen.Func().Id(fmt.Sprintf("Test%s_Delete", b.name)).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).
+			Block(
+				b.head(),
+				jen.Line(),
+				jen.Comment("Create test data"),
+
+				// create := &pb.ExampleCreate{}
+				// created, err := repo.Create(ctx, create)
+				// require.NoError(t ,err)
+				// require.NotNil(t, created)
+				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()),
+				define("created", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
+				jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
+				jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created")),
+				jen.Line(),
+
+				// tests := []ExampleDeleteAssert{}
+				define("tests").Op("[]").Id(fmt.Sprintf("%sDeleteAssert", b.node.Name)).Block(
+					jen.Block(
+						jen.Id("name").Op(":").Lit("successful delete").Op(","),
+						jen.Id("id").Op(":").Id("created").Dot("ID").Op(","),
+						jen.Id("wantError").Op(":").False().Op(","),
+					).Op(","),
+					jen.Block(
+						jen.Id("name").Op(":").Lit("delete non-existent").Op(","),
+						jen.Id("id").Op(":").Lit(99999).Op(","),
+						jen.Id("wantError").Op(":").True().Op(","),
+					).Op(","),
+					jen.Block(
+						jen.Id("name").Op(":").Lit("delete already deleted").Op(","),
+						jen.Id("id").Op(":").Id("created").Dot("ID").Op(",").Comment("// Already deleted above"),
+						jen.Id("wantError").Op(":").True().Op(","),
+					).Op(","),
+					jen.Block(
+						jen.Id("name").Op(":").Lit("delete with invalid id").Op(","),
+						jen.Id("id").Op(":").Lit(-1).Op(","),
+						jen.Id("wantError").Op(":").True().Op(","),
+					).Op(","),
+				),
+
+				// for _, tt := range tests {}
+				jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
+					// t.Run(tt.name, func(t *testing.T)) {}
+					jen.Id("t").Dot("Run").Call(
+						jen.Id("tt").Dot("name"),
+						jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
+							define("err").Id("repo").Dot("Delete").Call(jen.Id("ctx"), jen.Id("tt").Dot("id")),
+							jen.If(jen.Id("tt").Dot("wantError")).
+								Block(jen.Qual(pkgTestifyAssert, "Error").Call(jen.Id("t"), jen.Err())).
+								Else().
+								Block(
+									jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Err()),
+									jen.Comment(" Verify deletion"),
+									define("_", "err").Id("repo").Dot("Get").Call(jen.Id("ctx"), jen.Id("tt").Dot("id")),
+									jen.Qual(pkgTestifyAssert, "Error").Call(jen.Id("t"), jen.Err()).Comment("Should not find the record"),
+								),
+						),
+					),
+				),
+			),
+	)
 }
 
 func (b *repositoryUnitTestBuilder) set() jen.Code {
-	var codes []jen.Code
+	var codes = []jen.Code{
+		jen.Type().Id(fmt.Sprintf("%sSetAssert", b.node.Name)).Index(jen.Id("T").Any()).Struct(
+			jen.Id("name").String(),
+			jen.Id("id").Id(b.node.ID.Type.String()),
+			jen.Id("value").Id("T"),
+			jen.Id("wantError").Bool(),
+		).Line(),
+	}
 	for _, v := range b.node.Fields {
 		if v.Name == "created_at" || v.Name == "updated_at" {
 			continue
@@ -283,6 +506,11 @@ func (b *repositoryUnitTestBuilder) set() jen.Code {
 		codes = append(codes, fn)
 	}
 	return segments(codes...)
+}
+
+func (b *repositoryUnitTestBuilder) listEdges() jen.Code {
+	//TODO
+	return jen.Line()
 }
 
 func (b *repositoryUnitTestBuilder) integration() jen.Code {
@@ -404,146 +632,6 @@ func (b *repositoryUnitTestBuilder) errorHandling() jen.Code {
 		)
 }
 
-func (b *repositoryUnitTestBuilder) getBody() jen.Code {
-	return segments(
-		jen.Comment("Create test data"),
-
-		// create := &pb.ExampleCreate{}
-		// created, err := repo.Create(ctx, create)
-		// require.NoError(t ,err)
-		// require.NotNil(t, created)
-		define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()),
-		define("created", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
-		jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
-		jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created")),
-
-		// tests := []ExampleGetAssert{}
-		define("tests").Op("[]").Id(fmt.Sprintf("%sGetAssert", b.node.Name)).Block(
-			jen.Block(
-				jen.Id("name").Op(":").Lit("successful get").Op(","),
-				jen.Id("id").Op(":").Id("created").Dot("ID").Op(","),
-				jen.Id("want").Op(":").Id("created").Op(","),
-				jen.Id("wantError").Op(":").False().Op(","),
-			).Op(","),
-			jen.Block(
-				jen.Id("name").Op(":").Lit("not found").Op(","),
-				jen.Id("id").Op(":").Lit(99999).Op(","),
-				jen.Id("want").Op(":").Nil().Op(","),
-				jen.Id("wantError").Op(":").True().Op(","),
-			).Op(","),
-			jen.Block(
-				jen.Id("name").Op(":").Lit("invalid id").Op(","),
-				jen.Id("id").Op(":").Lit(-1).Op(","),
-				jen.Id("want").Op(":").Nil().Op(","),
-				jen.Id("wantError").Op(":").True().Op(","),
-			).Op(","),
-		),
-
-		// for _, tt := range tests {}
-		jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
-			// t.Run(tt.name, func(t *testing.T)) {}
-			jen.Id("t").Dot("Run").Call(
-				jen.Id("tt").Dot("name"),
-				jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
-					// got, err := repo.Get(ctx, tt.id)
-					define("got", "err").Id("repo").Dot("Get").Call(jen.Id("ctx"), jen.Id("tt").Dot("id")),
-					jen.If(jen.Id("tt").Dot("wantError")).
-						Block(
-							jen.Qual(pkgTestifyAssert, "Error").Call(jen.Id("t"), jen.Err()),
-							jen.Qual(pkgTestifyAssert, "Nil").Call(jen.Id("t"), jen.Id("got")),
-						).
-						Else().
-						Block(
-							jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Err()),
-							jen.Qual(pkgTestifyAssert, "NotNil").Call(jen.Id("t"), jen.Id("got")),
-							jen.Add(b.assertEqualGetFields()),
-						),
-				),
-			),
-		),
-	)
-}
-
-func (b *repositoryUnitTestBuilder) listBody() jen.Code {
-	return segments(
-		jen.Comment("Create test data"),
-		// testData := []*pb.ExampleCreate{}
-		define("testData").Op("[]").Op("*").Qual(b.ProtoPackage, b.node.Name+"Create").Block(
-			b.mockData().Op(","),
-			b.mockData().Op(","),
-			b.mockData().Op(","),
-		),
-		// for _, create := range testData {}
-		jen.For(jen.Id("_").Op(",").Id("create").Op(":=").Range().Id("testData")).Block(
-			define("_", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
-			jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Err()),
-		),
-		jen.Line(),
-		// tests := []ExampleListAssert{}
-		define("tests").Op("[]").Id(fmt.Sprintf("%sListAssert", b.node.Name)).Block(b.listTestCases()),
-		// for _, tt := range tests {}
-		jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
-			jen.Id("t").Dot("Run").Call(jen.Id("tt").Dot("name"), jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
-				define("got", "paginator", "err").Id("repo").Dot("List").Call(jen.Id("ctx"), jen.Id("tt").Dot("options"), jen.Id("tt").Dot("paginator")),
-				jen.If(jen.Id("tt").Dot("wantError")).
-					Block(jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Id("err"))).
-					Else().
-					Block(
-						jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Id("err")),
-						jen.Qual(pkgTestifyAssert, "Equal").Call(jen.Id("t"), jen.Id("tt").Dot("wantCount"), jen.Len(jen.Id("got"))),
-						jen.If(jen.Id("tt").Dot("paginator").Op("!=").Nil()).Block(
-							jen.Qual(pkgTestifyAssert, "NotNil").Call(jen.Id("t"), jen.Id("paginator")),
-							jen.Qual(pkgTestifyAssert, "Equal").Call(jen.Id("t"), jen.Int64().Call(jen.Lit(3)), jen.Id("paginator").Dot("Total")),
-						),
-					),
-			)),
-		),
-	)
-}
-
-func (b *repositoryUnitTestBuilder) createBody() jen.Code {
-	return segments(
-		define("tests").Op("[]").Id(fmt.Sprintf("%sCreateAssert", b.node.Name)).Block(
-			jen.Block(
-				jen.Id("name").Op(":").Lit("successful create with all fields").Op(","),
-				jen.Id("create").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()).Op(","),
-				jen.Id("wantError").Op(":").False().Op(","),
-			).Op(","),
-			jen.Block(
-				jen.Id("name").Op(":").Lit("create with empty fields").Op(","),
-				jen.Id("create").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Block().Op(","),
-				jen.Id("wantError").Op(":").Lit(!b.allowEmptyCreate()).Op(",").Comment(" If the entity contains bytes field, the create may be failed with empty data"),
-			).Op(","),
-		),
-
-		// for _, tt := range tests {}
-		jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
-			// t.Run(tt.name, func(t *testing.T)) {}
-			jen.Id("t").Dot("Run").Call(
-				jen.Id("tt").Dot("name"),
-				jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
-					// got, err := repo.Get(ctx, tt.id)
-					define("got", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("tt").Dot("create")),
-					// if tt.wantError {} else {}
-					jen.If(jen.Id("tt").Dot("wantError")).
-						Block(
-							jen.Qual(pkgTestifyAssert, "Error").Call(jen.Id("t"), jen.Err()),
-							jen.Qual(pkgTestifyAssert, "Nil").Call(jen.Id("t"), jen.Id("got")),
-						).
-						Else().
-						Block(
-							jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Err()),
-							jen.Qual(pkgTestifyAssert, "NotNil").Call(jen.Id("t"), jen.Id("got")),
-							jen.Add(b.assertEqualCreateFields()),
-							jen.Qual(pkgTestifyAssert, "NotZero").Call(jen.Id("t"), jen.Id("got").Dot("CreatedAt")),
-							jen.Qual(pkgTestifyAssert, "NotZero").Call(jen.Id("t"), jen.Id("got").Dot("UpdatedAt")),
-						),
-				),
-			),
-		),
-	)
-}
-
 func (b *repositoryUnitTestBuilder) allowEmptyCreate() bool {
 	for _, v := range b.node.Fields {
 		if v.Optional || v.Nillable {
@@ -554,78 +642,6 @@ func (b *repositoryUnitTestBuilder) allowEmptyCreate() bool {
 		}
 	}
 	return true
-}
-
-func (b *repositoryUnitTestBuilder) updateBody() jen.Code {
-	return segments(
-		jen.Comment("Create test data"),
-
-		// create := &pb.ExampleCreate{}
-		// created, err := repo.Create(ctx, create)
-		// require.NoError(t ,err)
-		// require.NotNil(t, created)
-		define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()),
-		define("created", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
-		jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
-		jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created")),
-
-		jen.Line(),
-
-		define("now").Qual(pkgTime, "Now").Call(),
-		define("timestamp").Qual(pkgTimestamppb, "New").Call(jen.Id("now")),
-
-		jen.Line(),
-
-		// tests := []ExampleUpdateAssert{}
-		define("tests").Op("[]").Id(fmt.Sprintf("%sUpdateAssert", b.node.Name)).Block(
-			jen.Block(
-				jen.Id("name").Op(":").Lit("update all fields").Op(","),
-				jen.Id("id").Op(":").Id("created").Dot("ID").Op(","),
-				jen.Id("update").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Update").Add(b.mockData(true)).Op(","),
-				jen.Id("wantError").Op(":").False().Op(","),
-			).Op(","),
-			jen.Block(
-				jen.Id("name").Op(":").Lit("update with timestamps").Op(","),
-				jen.Id("id").Op(":").Id("created").Dot("ID").Op(","),
-				jen.Id("update").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Update").Block(
-					jen.Id("CreatedAt").Op(":").Id("timestamp").Op(","),
-					jen.Id("UpdatedAt").Op(":").Id("timestamp").Op(","),
-				).Op(","),
-				jen.Id("wantError").Op(":").False().Op(","),
-			).Op(","),
-			jen.Block(
-				jen.Id("name").Op(":").Lit("update no-existent record").Op(","),
-				jen.Id("id").Op(":").Lit(99999).Op(","),
-				jen.Id("update").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Update").Add(b.mockData(true)).Op(","),
-				jen.Id("wantError").Op(":").True().Op(","),
-			).Op(","),
-			jen.Block(
-				jen.Id("name").Op(":").Lit("update with empty data").Op(","),
-				jen.Id("id").Op(":").Id("created").Dot("ID").Op(","),
-				jen.Id("update").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Update").Block().Op(","),
-				jen.Id("wantError").Op(":").False().Op(",").Comment("no error, no changes"),
-			).Op(","),
-		),
-
-		// for _, tt := range tests {}
-		jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
-			// t.Run(tt.name, func(t *testing.T)) {}
-			jen.Id("t").Dot("Run").Call(
-				jen.Id("tt").Dot("name"),
-				jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
-					define("err").Id("repo").Dot("Update").Call(jen.Id("ctx"), jen.Id("tt").Dot("id"), jen.Id("tt").Dot("update")),
-					jen.If(jen.Id("tt").Dot("wantError")).
-						Block(jen.Qual(pkgTestifyAssert, "Error").Call(jen.Id("t"), jen.Err())).
-						Else().
-						Block(
-							jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Err()),
-							jen.Comment("// Verify update if not expecting error and ID exists"),
-							b.assertEqualUpdateFields(),
-						),
-				),
-			),
-		),
-	)
 }
 
 func (b *repositoryUnitTestBuilder) listTestCases() jen.Code {
@@ -727,58 +743,6 @@ func (b *repositoryUnitTestBuilder) assertEqualUpdateFields() jen.Code {
 		jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Err()),
 		segments(fields...),
 	)
-}
-
-func (b *repositoryUnitTestBuilder) getAssertStruct() jen.Code {
-	return jen.Type().Id(fmt.Sprintf("%sGetAssert", b.node.Name)).Struct(
-		jen.Id("name").String(),
-		jen.Id("id").Id(b.node.ID.Type.String()),
-		jen.Id("want").Op("*").Qual(b.entityPackage, b.node.Name),
-		jen.Id("wantError").Bool(),
-	).Line()
-}
-
-func (b *repositoryUnitTestBuilder) listAssertStruct() jen.Code {
-	return jen.Type().Id(fmt.Sprintf("%sListAssert", b.node.Name)).Struct(
-		jen.Id("name").String(),
-		jen.Id("options").Op("*").Qual(b.ProtoPackage, b.node.Name+"Options"),
-		jen.Id("paginator").Op("*").Qual(pkgCoconutField, "ClassicalPaginator"), // TODO
-		jen.Id("wantCount").Int(),
-		jen.Id("wantError").Bool(),
-	).Line()
-}
-
-func (b *repositoryUnitTestBuilder) createAssertStruct() jen.Code {
-	return jen.Type().Id(fmt.Sprintf("%sCreateAssert", b.node.Name)).Struct(
-		jen.Id("name").String(),
-		jen.Id("create").Op("*").Qual(b.ProtoPackage, b.node.Name+"Create"),
-		jen.Id("wantError").Bool(),
-	).Line()
-}
-
-func (b *repositoryUnitTestBuilder) updateAssertStruct() jen.Code {
-	return jen.Type().Id(fmt.Sprintf("%sUpdateAssert", b.node.Name)).Struct(
-		jen.Id("name").String(),
-		jen.Id("id").Id(b.node.ID.Type.String()),
-		jen.Id("update").Op("*").Qual(b.ProtoPackage, b.node.Name+"Update"),
-		jen.Id("wantError").Bool(),
-	).Line()
-}
-
-func (b *repositoryUnitTestBuilder) deleteAssertStruct() jen.Code {
-	return jen.Type().Id(fmt.Sprintf("%sDeleteAssert", b.node.Name)).Struct(
-		jen.Id("name").String(),
-		jen.Id("id").Id(b.node.ID.Type.String()),
-		jen.Id("wantError").Bool(),
-	).Line()
-}
-func (b *repositoryUnitTestBuilder) setAssertStruct() jen.Code {
-	return jen.Type().Id(fmt.Sprintf("%sSetAssert", b.node.Name)).Index(jen.Id("T").Any()).Struct(
-		jen.Id("name").String(),
-		jen.Id("id").Id(b.node.ID.Type.String()),
-		jen.Id("value").Id("T"),
-		jen.Id("wantError").Bool(),
-	).Line()
 }
 
 func (b *repositoryUnitTestBuilder) mockData(ptr ...bool) *jen.Statement {
