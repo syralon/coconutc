@@ -106,6 +106,11 @@ func (g *Generator) init() (err error) {
 		RepositoryBuilder("data", path.Join(g.module, entityPath), path.Join(g.module, txPath)),
 	).addWriter(
 		func(n *gen.Type) string {
+			return path.Join(g.output, dataPath, strings.ToLower(n.Name)) + ".coconut_test.go"
+		},
+		RepositoryUnitTestBuilder("data", path.Join(g.module, entityPath), path.Join(g.module, txPath)),
+	).addWriter(
+		func(n *gen.Type) string {
 			return path.Join(g.output, servicePath, strings.ToLower(n.Name)+"service", strings.ToLower(n.Name)) + ".coconut.go"
 		},
 		ServiceBuilder(path.Join(g.module, repositoryPath), path.Join(g.module, entityPath)),

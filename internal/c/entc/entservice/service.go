@@ -19,10 +19,12 @@ func ServiceBuilder(repoPkg, entityPkg string) BuildFunc {
 		file.HeaderComment("https://github.com/syralon/coconutc")
 		file.ImportAlias(opts.ProtoPackage, "pb")
 		b := &serviceBuilder{
-			BuildOptions:      opts,
-			name:              fmt.Sprintf("%sService", node.Name),
-			node:              node,
-			file:              file,
+			BuildOptions: opts,
+			builder: builder{
+				name: fmt.Sprintf("%sService", node.Name),
+				node: node,
+				file: file,
+			},
 			repositoryPackage: repoPkg,
 			entityPackage:     entityPkg,
 		}
@@ -36,12 +38,10 @@ func ServiceBuilder(repoPkg, entityPkg string) BuildFunc {
 
 type serviceBuilder struct {
 	*BuildOptions
+	builder
+
 	repositoryPackage string
 	entityPackage     string
-
-	file *jen.File
-	name string
-	node *gen.Type
 }
 
 func (b *serviceBuilder) build(_ context.Context) error {

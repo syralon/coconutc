@@ -16,10 +16,7 @@ import (
 
 type repositoryBuilder struct {
 	*BuildOptions
-
-	file          *jen.File
-	name          string
-	node          *gen.Type
+	builder
 	entityPackage string
 	txPackage     string
 }
@@ -289,6 +286,9 @@ func (b *repositoryBuilder) list() {
 
 	b.fn(b.fnList(paginatorName)).
 		Block(
+			jen.If(jen.Id("options").Op("==").Nil()).Block(
+				jen.Return(jen.Nil(), jen.Nil(), jen.Id("ParameterNilError").Call(jen.Id("\"options\""))),
+			),
 			define("query").Id("rep").Dot(b.node.Name).Call(jen.Id("ctx")).Dot("Query()").Dot("Where").Call(
 				jen.Qual(pkgCoconutField, "Selectors").Index(jen.Qual(path.Join(b.EntPackage, "predicate"), b.node.Name)).Add(calls(fields...)).Op("..."),
 			),
@@ -330,6 +330,9 @@ func (b *repositoryBuilder) create() {
 
 	b.fn(b.fnCreate()).
 		Block(
+			jen.If(jen.Id("create").Op("==").Nil()).Block(
+				jen.Return(jen.Nil(), jen.Id("ParameterNilError").Call(jen.Id("\"create\""))),
+			),
 			create,
 			define("data", "err").Id("op").Dot("Save").Call(jen.Id("ctx")),
 			ifErr(),
@@ -372,6 +375,9 @@ func (b *repositoryBuilder) update() {
 
 	b.fn(b.fnUpdate()).
 		Block(
+			jen.If(jen.Id("data").Op("==").Nil()).Block(
+				jen.Return(jen.Id("ParameterNilError").Call(jen.Id("\"data\""))),
+			),
 			define("update").Id("rep").Dot(b.node.Name).Call(jen.Id("ctx")).Dot("UpdateOneID").Call(jen.Id("id")),
 			jen.Add(fields...),
 			define("_", "err").Id("update").Dot("Save").Call(jen.Id("ctx")),
@@ -408,7 +414,8 @@ func (b *repositoryBuilder) classicalPaginator() *jen.Statement {
 		),
 		jen.Id("paginator").Dot("Total").Op("=").Int64().Call(jen.Id("total")),
 		assign("query").Id("query").Dot("Order").Call(jen.Id("paginator").Dot("OrderSelector").Call()).
-			Dot("Offset").Call(jen.Int().Call(jen.Id("paginator").Dot("GetLimit()").Op("*").Call(jen.Id("paginator").Dot("GetPage()").Op("-").Id("1")))),
+			Dot("Offset").Call(jen.Int().Call(jen.Id("paginator").Dot("GetLimit()").Op("*").Call(jen.Id("paginator").Dot("GetPage()").Op("-").Id("1")))).
+			Dot("Limit").Call(jen.Int().Call(jen.Id("paginator").Dot("GetLimit()"))),
 	)
 }
 
@@ -435,10 +442,12 @@ func RepositoryBuilder(pkgName, entityPkg, txPackage string) BuildFunc {
 		file.HeaderComment("ent." + node.Name)
 		file.ImportAlias(opts.ProtoPackage, "pb")
 		b := &repositoryBuilder{
-			BuildOptions:  opts,
-			name:          fmt.Sprintf("%sRepository", node.Name),
-			node:          node,
-			file:          file,
+			BuildOptions: opts,
+			builder: builder{
+				name: fmt.Sprintf("%sRepository", node.Name),
+				node: node,
+				file: file,
+			},
 			entityPackage: entityPkg,
 			txPackage:     txPackage,
 		}
@@ -457,10 +466,12 @@ func RepositoryInterfaceBuilder(pkgName, entityPkg string) BuildFunc {
 		file.HeaderComment("https://github.com/syralon/coconutc")
 		file.ImportAlias(opts.ProtoPackage, "pb")
 		b := &repositoryBuilder{
-			BuildOptions:  opts,
-			file:          file,
-			name:          fmt.Sprintf("%sRepository", node.Name),
-			node:          node,
+			BuildOptions: opts,
+			builder: builder{
+				file: file,
+				name: fmt.Sprintf("%sRepository", node.Name),
+				node: node,
+			},
 			entityPackage: entityPkg,
 		}
 		var funcs []jen.Code
