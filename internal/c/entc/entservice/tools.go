@@ -125,23 +125,31 @@ func protoType(t field.Type, v *jen.Statement) *jen.Statement {
 	}
 }
 
-func fieldProtoType(t field.Type) *jen.Statement {
+func fieldProtoType(t field.Type, opts *entproto.FieldOptions) *jen.Statement {
+	if opts.Type > 0 {
+		t = opts.Type
+	}
+	var typ *jen.Statement
 	switch t {
 	case field.TypeInt8, field.TypeInt16, field.TypeInt32:
-		return jen.Int32()
+		typ = jen.Int32()
 	case field.TypeInt, field.TypeInt64:
-		return jen.Int64()
+		typ = jen.Int64()
 	case field.TypeUint8, field.TypeUint32:
-		return jen.Uint32()
+		typ = jen.Uint32()
 	case field.TypeUint, field.TypeUint64:
-		return jen.Uint64()
+		typ = jen.Uint64()
 	case field.TypeString:
-		return jen.String()
+		typ = jen.String()
 	case field.TypeUUID:
-		return jen.String()
+		typ = jen.String()
 	default:
-		return jen.Any()
+		typ = jen.Any()
 	}
+	if opts.TypeRepeated {
+		typ = jen.Index().Add(typ)
+	}
+	return typ
 }
 
 // insert 'name' behind the first word in 'method'
@@ -232,9 +240,9 @@ func RandNumber(ranges ...int) *jen.Statement {
 func RandBytes(n int) *jen.Statement {
 	b := make([]jen.Code, n)
 	for i := range b {
-		b[i] = RandNumber(256)
+		b[i] = RandNumber(256).Op(",")
 	}
-	return jen.Op("[]").Byte().Block(b...)
+	return jen.Op("[]").Byte().Op("{").Add(b...).Op("}")
 }
 
 func RandString(prefix string, n int) *jen.Statement {

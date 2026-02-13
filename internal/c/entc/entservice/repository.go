@@ -202,7 +202,7 @@ func (b *repositoryBuilder) edges() {
 			if err != nil {
 				return
 			}
-			if fieldOpts.Sensitive || !fieldOpts.Filterable {
+			if v.Sensitive() || !fieldOpts.Filterable {
 				continue
 			}
 			fields = append(fields, jen.Id("options").Dot("Get"+text.ProtoPascal(v.Name)).Call().Dot("Selector").Call(
@@ -276,7 +276,7 @@ func (b *repositoryBuilder) list() {
 		if err != nil {
 			return
 		}
-		if fieldOpts.Sensitive || !fieldOpts.Filterable {
+		if v.Sensitive() || !fieldOpts.Filterable {
 			continue
 		}
 		fields = append(fields, jen.Id("options").Dot("Get"+text.ProtoPascal(v.Name)).Call().Dot("Selector").Call(

@@ -39,7 +39,7 @@ func toProtoFunc(file *jen.File, node *gen.Type, opts *BuildOptions, withEdge bo
 		if err != nil {
 			return
 		}
-		if fieldOpts.Sensitive {
+		if fi.Sensitive() {
 			continue
 		}
 		var v *jen.Statement

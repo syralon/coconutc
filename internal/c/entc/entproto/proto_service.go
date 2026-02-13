@@ -91,7 +91,7 @@ func (b *ServiceBuilder) messages(ctx *Context, file *protobuilder.FileBuilder, 
 		WithForceOptional(true),
 		WithSingleEdge(true),
 		WithForceSingleField(true),
-		WithSkipFunc(func(f *gen.Field, opt entproto.FieldOptions) bool { return opt.Sensitive || !opt.Filterable }),
+		WithSkipFunc(func(f *gen.Field, opt entproto.FieldOptions) bool { return f.Sensitive() || !opt.Filterable }),
 		WithEdgeName(func(g *gen.Type) protoreflect.Name { return protoreflect.Name(fmt.Sprintf("%sOptions", g.Name)) }),
 	).Build(ctx, optionsMessage, node, true)
 	if err != nil {

@@ -34,7 +34,6 @@ type FieldOptions struct {
 	Filterable     bool
 	Immutable      bool
 	Settable       bool
-	Sensitive      bool
 	Filter         Filter
 	Orderable      bool
 	Type           field.Type
@@ -72,14 +71,6 @@ func WithFieldSettable(settable bool) FieldOption {
 func WithFieldFilterable(filterable bool) FieldOption {
 	return func(a *fieldAnnotation) {
 		a.Filterable = filterable
-	}
-}
-
-// WithFieldSensitive
-// The sensitive field will not be shown.
-func WithFieldSensitive(sensitive bool) FieldOption {
-	return func(a *fieldAnnotation) {
-		a.Sensitive = sensitive
 	}
 }
 

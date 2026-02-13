@@ -15,5 +15,9 @@ func MemoryClient(t TestingT) *ent.Client {
 		t.Error(err)
 		t.FailNow()
 	}
-	return NewClient(t, WithOptions(ent.Driver(drv)))
+	return NewClient(
+		t,
+		WithOptions(ent.Driver(drv)),
+		// WithMigrateOptions(migrate.WithForeignKeys(false)), // maybe you want to remove foreign keys constraint in test
+	)
 }

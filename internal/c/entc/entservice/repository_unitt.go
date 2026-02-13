@@ -213,7 +213,7 @@ func (b *repositoryUnitTestBuilder) set() jen.Code {
 		if fieldOpts.ProtoEnum {
 			t = jen.Qual(b.ProtoPackage, strcase.ToScreamingSnake(fmt.Sprintf("%s_%s", b.node.Name, v.Name)))
 		} else {
-			t = fieldProtoType(v.Type.Type)
+			t = fieldProtoType(v.Type.Type, &fieldOpts)
 		}
 		fn := jen.Func().Id(fmt.Sprintf("Test%s_Set%s", b.name, text.EntPascal(v.Name))).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).
 			Block(
@@ -308,7 +308,7 @@ func (b *repositoryUnitTestBuilder) integration() jen.Code {
 			sets,
 			segments(
 				jen.Comment(" Set "+v.Name),
-				define(strcase.ToLowerCamel(v.Name+"Value")).Add(b.mockValue(v, &fieldOpts)),
+				define(strcase.ToLowerCamel(v.Name+"Value")).Add(b.mockValue(v, &fieldOpts, true)),
 				assign("err").Id("repo").Dot("Set"+text.EntPascal(v.Name)).Call(jen.Id("ctx"), jen.Id("created").Dot("ID"), jen.Id(strcase.ToLowerCamel(v.Name+"Value"))),
 				jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Err()),
 				jen.Comment(" Verify "+v.Name+" change"),
@@ -468,7 +468,11 @@ func (b *repositoryUnitTestBuilder) listBody() jen.Code {
 	return segments(
 		jen.Comment("Create test data"),
 		// testData := []*pb.ExampleCreate{}
-		define("testData").Op("[]").Op("*").Qual(b.ProtoPackage, b.node.Name+"Create").Block(b.mockData().Op(","), b.mockData().Op(","), b.mockData().Op(",")),
+		define("testData").Op("[]").Op("*").Qual(b.ProtoPackage, b.node.Name+"Create").Block(
+			b.mockData().Op(","),
+			b.mockData().Op(","),
+			b.mockData().Op(","),
+		),
 		// for _, create := range testData {}
 		jen.For(jen.Id("_").Op(",").Id("create").Op(":=").Range().Id("testData")).Block(
 			define("_", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
@@ -506,9 +510,9 @@ func (b *repositoryUnitTestBuilder) createBody() jen.Code {
 				jen.Id("wantError").Op(":").False().Op(","),
 			).Op(","),
 			jen.Block(
-				jen.Id("name").Op(":").Lit("successful create with empty fields").Op(","),
+				jen.Id("name").Op(":").Lit("create with empty fields").Op(","),
 				jen.Id("create").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Block().Op(","),
-				jen.Id("wantError").Op(":").False().Op(","),
+				jen.Id("wantError").Op(":").Lit(!b.allowEmptyCreate()).Op(",").Comment(" If the entity contains bytes field, the create may be failed with empty data"),
 			).Op(","),
 		),
 
@@ -538,6 +542,18 @@ func (b *repositoryUnitTestBuilder) createBody() jen.Code {
 			),
 		),
 	)
+}
+
+func (b *repositoryUnitTestBuilder) allowEmptyCreate() bool {
+	for _, v := range b.node.Fields {
+		if v.Optional || v.Nillable {
+			continue
+		}
+		if v.Type.Type == field.TypeBytes {
+			return false
+		}
+	}
+	return true
 }
 
 func (b *repositoryUnitTestBuilder) updateBody() jen.Code {
@@ -673,7 +689,7 @@ func (b *repositoryUnitTestBuilder) assertEqualCreateFields() jen.Code {
 			fields,
 			jen.Qual(pkgTestifyAssert, "Equal").Call(
 				jen.Id("t"),
-				entType(v.Type.Type, jen.Id("tt").Dot("create").Dot(text.EntPascal(v.Name)), &fieldOpts),
+				entType(v.Type.Type, jen.Id("tt").Dot("create").Dot(text.ProtoPascal(v.Name)), &fieldOpts),
 				jen.Id("got").Dot(text.EntPascal(v.Name)),
 			),
 		)
@@ -691,10 +707,16 @@ func (b *repositoryUnitTestBuilder) assertEqualUpdateFields() jen.Code {
 		if err != nil {
 			continue
 		}
+
+		val := jen.Id("tt").Dot("update").Dot(text.ProtoPascal(v.Name))
+		if !(v.Type.Type == field.TypeBytes || fieldOpts.TypeRepeated) {
+			val = jen.Op("*").Add(val)
+		}
+
 		seg := jen.If(jen.Id("tt").Dot("update").Dot(text.ProtoPascal(v.Name)).Op("!=").Nil()).Block(
 			jen.Qual(pkgTestifyAssert, "Equal").Call(
 				jen.Id("t"),
-				entType(v.Type.Type, jen.Op("*").Id("tt").Dot("update").Dot(text.ProtoPascal(v.Name)), &fieldOpts),
+				entType(v.Type.Type, val, &fieldOpts),
 				jen.Id("updated").Dot(text.EntPascal(v.Name)),
 			),
 		)
@@ -760,8 +782,26 @@ func (b *repositoryUnitTestBuilder) setAssertStruct() jen.Code {
 }
 
 func (b *repositoryUnitTestBuilder) mockData(ptr ...bool) *jen.Statement {
+	fields := b.mockFields(b.node, ptr...)
+	//for _, v := range b.node.Edges {
+	//	if v.Optional {
+	//		continue
+	//	}
+	//	edgeFields := b.mockFields(v.Type, ptr...)
+	//	if len(edgeFields) == 0 {
+	//		continue
+	//	}
+	//	fields = append(
+	//		fields,
+	//		jen.Id(text.ProtoPascal(v.Name)).Op(":").Op("&").Qual(b.ProtoPackage, v.Type.Name+edgeSuffix).Block(edgeFields...).Op(","),
+	//	)
+	//}
+	return jen.Block(fields...)
+}
+
+func (b *repositoryUnitTestBuilder) mockFields(node *gen.Type, ptr ...bool) []jen.Code {
 	var fields []jen.Code
-	for _, v := range b.node.Fields {
+	for _, v := range node.Fields {
 		if v.Optional || v.Name == "created_at" || v.Name == "updated_at" || v.Name == "deleted_at" {
 			continue
 		}
@@ -770,15 +810,21 @@ func (b *repositoryUnitTestBuilder) mockData(ptr ...bool) *jen.Statement {
 			continue
 		}
 		val := b.mockValue(v, &fieldOpts)
-		if len(ptr) > 0 && ptr[0] {
-			val = jen.Id("pointer").Call(val)
+		if len(ptr) > 0 && ptr[0] && v.Type.Type != field.TypeBytes && !fieldOpts.TypeRepeated {
+			switch v.Type.Type {
+			case field.TypeInt8, field.TypeInt16, field.TypeInt32, field.TypeInt64,
+				field.TypeUint8, field.TypeUint16, field.TypeUint32, field.TypeUint, field.TypeUint64, field.TypeFloat32:
+				val = jen.Id("pointer").Index(jen.Id(v.Type.Type.String())).Call(val)
+			default:
+				val = jen.Id("pointer").Call(val)
+			}
 		}
 		fields = append(fields, jen.Id(text.ProtoPascal(v.Name)).Op(":").Add(val).Op(","))
 	}
-	return jen.Block(fields...)
+	return fields
 }
 
-func (b *repositoryUnitTestBuilder) mockValue(v *gen.Field, opts *entproto.FieldOptions) *jen.Statement {
+func (b *repositoryUnitTestBuilder) mockValue(v *gen.Field, opts *entproto.FieldOptions, withType ...bool) *jen.Statement {
 	t := v.Type.Type
 	if opts.Type > 0 {
 		t = opts.Type
@@ -804,8 +850,15 @@ func (b *repositoryUnitTestBuilder) mockValue(v *gen.Field, opts *entproto.Field
 		} else {
 			val = RandNumber(256)
 		}
+		if len(withType) > 0 && withType[0] && t != field.TypeInt && t != field.TypeFloat64 {
+			val = jen.Id(t.String()).Call(val)
+		}
 	default:
 		val = &jen.Statement{}
+	}
+
+	if opts.TypeRepeated {
+		val = jen.Index().Id(t.String()).Op("{").Add(val).Op("}")
 	}
 	return val
 }

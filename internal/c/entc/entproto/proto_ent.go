@@ -42,7 +42,7 @@ func (b *EntBuilder) Build(ctx *Context, graph *gen.Graph) ([]*protobuilder.File
 		file.AddMessage(message)
 		messages = append(messages, message)
 	}
-	h := NewMessageBuildHelper(WithSkipFunc(func(f *gen.Field, opt entproto.FieldOptions) bool { return opt.Sensitive }))
+	h := NewMessageBuildHelper(WithSkipFunc(func(f *gen.Field, opt entproto.FieldOptions) bool { return f.Sensitive() }))
 	for i, node := range graph.Nodes {
 		if err := h.Build(ctx, messages[i], node); err != nil {
 			return nil, err
