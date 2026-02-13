@@ -202,6 +202,9 @@ func isGeneratedFile(data []byte) bool {
 }
 
 func segments(codes ...jen.Code) *jen.Statement {
+	if len(codes) == 0 {
+		return &jen.Statement{}
+	}
 	stmt := make(jen.Statement, 0, len(codes)*2-1)
 	for i, code := range codes {
 		if i > 0 {
