@@ -668,8 +668,6 @@ func (b *repositoryUnitTestBuilder) listTestCases() jen.Code {
 		}
 		var typeName string
 		switch t {
-		case field.TypeTime:
-			typeName = "Timestamp"
 		case field.TypeInt8, field.TypeInt16, field.TypeInt32:
 			typeName = "Int32"
 		case field.TypeInt, field.TypeInt64:
@@ -682,6 +680,8 @@ func (b *repositoryUnitTestBuilder) listTestCases() jen.Code {
 			typeName = "Float"
 		case field.TypeFloat64:
 			typeName = "Double"
+		case field.TypeBytes:
+			typeName = "Bytes"
 		default:
 			typeName = strcase.ToCamel(t.String())
 		}
@@ -689,6 +689,13 @@ func (b *repositoryUnitTestBuilder) listTestCases() jen.Code {
 		if fieldOpts.TypeRepeated {
 			//TODO repeated field cant be filtered
 			continue
+		}
+		if t == field.TypeTime {
+			val = jen.Op("&").Qual(pkgCoconutField, "TimestampField").Op("{").Add(
+				jen.Id("Operator").Op(":").Op("&").Qual(pkgCoconutField, "TimestampField_Gte").Op("{").Add(
+					jen.Id("Gte").Op(":").Qual(pkgTimestamppb, "New").Call(jen.Id("created").Index(jen.Lit(0)).Dot(text.EntPascal(v.Name))),
+				).Op("}"),
+			).Op("}")
 		} else {
 			val = jen.Qual(pkgCoconutField, "New"+typeName).Call(jen.Id("created").Index(jen.Lit(0)).Dot(text.EntPascal(v.Name)))
 		}
