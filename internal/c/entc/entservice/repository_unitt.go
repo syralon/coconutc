@@ -60,7 +60,7 @@ func (b *repositoryUnitTestBuilder) build(ctx context.Context) error {
 		b.update(),
 		b.delete(),
 		b.set(),
-		b.listEdges(),
+		b.edges(),
 		b.integration(),
 		b.errorHandling(),
 	))
@@ -99,7 +99,7 @@ func (b *repositoryUnitTestBuilder) get() jen.Code {
 				// created, err := repo.Create(ctx, create)
 				// require.NoError(t ,err)
 				// require.NotNil(t, created)
-				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()),
+				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData(b.node, nil)),
 				define("created", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
 				jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
 				jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created")),
@@ -143,7 +143,7 @@ func (b *repositoryUnitTestBuilder) get() jen.Code {
 								Block(
 									jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Err()),
 									jen.Qual(pkgTestifyAssert, "NotNil").Call(jen.Id("t"), jen.Id("got")),
-									jen.Add(b.assertEqualGetFields()),
+									jen.Add(b.assertEqualGetFields(b.node)),
 								),
 						),
 					),
@@ -168,9 +168,9 @@ func (b *repositoryUnitTestBuilder) list() jen.Code {
 				jen.Comment("Create test data"),
 				// testData := []*pb.ExampleCreate{}
 				define("testData").Op("[]").Op("*").Qual(b.ProtoPackage, b.node.Name+"Create").Block(
-					b.mockData().Op(","),
-					b.mockData().Op(","),
-					b.mockData().Op(","),
+					b.mockData(b.node, nil).Op(","),
+					b.mockData(b.node, nil).Op(","),
+					b.mockData(b.node, nil).Op(","),
 				),
 				// created := make([]*entity.Example, 0, len(testData))
 				// for _, create := range testData {}
@@ -183,7 +183,7 @@ func (b *repositoryUnitTestBuilder) list() jen.Code {
 				jen.Qual(pkgTestifyAssert, "Len").Call(jen.Id("t"), jen.Id("created"), jen.Len(jen.Id("testData"))),
 				jen.Line(),
 				// tests := []ExampleListAssert{}
-				define("tests").Op("[]").Id(fmt.Sprintf("%sListAssert", b.node.Name)).Block(b.listTestCases()),
+				define("tests").Op("[]").Id(fmt.Sprintf("%sListAssert", b.node.Name)).Block(b.listTestCases(b.node)),
 				// for _, tt := range tests {}
 				jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
 					jen.Id("t").Dot("Run").Call(jen.Id("tt").Dot("name"), jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
@@ -219,7 +219,7 @@ func (b *repositoryUnitTestBuilder) create() jen.Code {
 				define("tests").Op("[]").Id(fmt.Sprintf("%sCreateAssert", b.node.Name)).Block(
 					jen.Block(
 						jen.Id("name").Op(":").Lit("successful create with all fields").Op(","),
-						jen.Id("create").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()).Op(","),
+						jen.Id("create").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData(b.node, nil)).Op(","),
 						jen.Id("wantError").Op(":").False().Op(","),
 					).Op(","),
 					jen.Block(
@@ -276,7 +276,7 @@ func (b *repositoryUnitTestBuilder) update() jen.Code {
 				// created, err := repo.Create(ctx, create)
 				// require.NoError(t ,err)
 				// require.NotNil(t, created)
-				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()),
+				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData(b.node, nil)),
 				define("created", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
 				jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
 				jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created")),
@@ -293,7 +293,7 @@ func (b *repositoryUnitTestBuilder) update() jen.Code {
 					jen.Block(
 						jen.Id("name").Op(":").Lit("update all fields").Op(","),
 						jen.Id("id").Op(":").Id("created").Dot("ID").Op(","),
-						jen.Id("update").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Update").Add(b.mockData(true)).Op(","),
+						jen.Id("update").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Update").Add(b.mockData(b.node, nil, true)).Op(","),
 						jen.Id("wantError").Op(":").False().Op(","),
 					).Op(","),
 					jen.Block(
@@ -308,7 +308,7 @@ func (b *repositoryUnitTestBuilder) update() jen.Code {
 					jen.Block(
 						jen.Id("name").Op(":").Lit("update no-existent record").Op(","),
 						jen.Id("id").Op(":").Lit(99999).Op(","),
-						jen.Id("update").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Update").Add(b.mockData(true)).Op(","),
+						jen.Id("update").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Update").Add(b.mockData(b.node, nil, true)).Op(","),
 						jen.Id("wantError").Op(":").True().Op(","),
 					).Op(","),
 					jen.Block(
@@ -359,7 +359,7 @@ func (b *repositoryUnitTestBuilder) delete() jen.Code {
 				// created, err := repo.Create(ctx, create)
 				// require.NoError(t ,err)
 				// require.NotNil(t, created)
-				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()),
+				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData(b.node, nil)),
 				define("created", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
 				jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
 				jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created")),
@@ -413,14 +413,8 @@ func (b *repositoryUnitTestBuilder) delete() jen.Code {
 }
 
 func (b *repositoryUnitTestBuilder) set() jen.Code {
-	var codes = []jen.Code{
-		jen.Type().Id(fmt.Sprintf("%sSetAssert", b.node.Name)).Index(jen.Id("T").Any()).Struct(
-			jen.Id("name").String(),
-			jen.Id("id").Id(b.node.ID.Type.String()),
-			jen.Id("value").Id("T"),
-			jen.Id("wantError").Bool(),
-		).Line(),
-	}
+	var codes []jen.Code
+	var i = false
 	for _, v := range b.node.Fields {
 		if v.Name == "created_at" || v.Name == "updated_at" {
 			continue
@@ -434,6 +428,15 @@ func (b *repositoryUnitTestBuilder) set() jen.Code {
 		}
 		if fieldOpts.Immutable || !fieldOpts.Settable {
 			continue
+		}
+		if !i {
+			codes = append(codes, jen.Type().Id(fmt.Sprintf("%sSetAssert", b.node.Name)).Index(jen.Id("T").Any()).Struct(
+				jen.Id("name").String(),
+				jen.Id("id").Id(b.node.ID.Type.String()),
+				jen.Id("value").Id("T"),
+				jen.Id("wantError").Bool(),
+			).Line())
+			i = true
 		}
 
 		var t jen.Code
@@ -452,7 +455,7 @@ func (b *repositoryUnitTestBuilder) set() jen.Code {
 				// created, err := repo.Create(ctx, create)
 				// require.NoError(t ,err)
 				// require.NotNil(t, created)
-				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()),
+				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData(b.node, nil)),
 				define("created", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
 				jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
 				jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created")),
@@ -512,9 +515,182 @@ func (b *repositoryUnitTestBuilder) set() jen.Code {
 	return segments(codes...)
 }
 
-func (b *repositoryUnitTestBuilder) listEdges() jen.Code {
-	//TODO
-	return jen.Line()
+func (b *repositoryUnitTestBuilder) edges() jen.Code {
+	var funcs jen.Statement
+	for _, edge := range b.node.Edges {
+		edgeOpts, err := entproto.GetAPIOptions(edge.Annotations)
+		if err != nil {
+			panic(err)
+		}
+		if edgeOpts.DisableEdge {
+			continue
+		}
+		if edge.Unique {
+			funcs = append(funcs, b.edgeGet(edge))
+		} else {
+			funcs = append(funcs, b.edgeList(edge, edgeOpts.PaginatorStyle))
+		}
+	}
+	return &funcs
+}
+
+func (b *repositoryUnitTestBuilder) edgeGet(edge *gen.Edge) jen.Code {
+	idValue := map[string]*jen.Statement{strcase.ToSnake(edge.Type.Name + "_id"): jen.Id("created").Dot("ID")}
+	return segments(
+		jen.Func().Id(fmt.Sprintf("Test%s_Get%s", b.name, text.EntPascal(edge.Name))).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
+			b.head(),
+			define("repoRel").Id("New"+edge.Type.Name+"Repository").Call(jen.Qual(b.txPackage, "NewRepository").Call(jen.Id("client"))),
+			jen.Line(),
+
+			define("create").Op("&").Qual(b.ProtoPackage, edge.Type.Name+"Create").Add(b.mockData(edge.Type, nil)),
+			define("created", "err").Id("repoRel").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
+			jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
+			jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created")),
+
+			// create := &pb.ExampleCreate{}
+			// created, err := repo.Create(ctx, create)
+			// require.NoError(t ,err)
+			// require.NotNil(t, created)
+			define("create"+b.node.Name).Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData(b.node, idValue)),
+			define("created"+b.node.Name, "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create"+b.node.Name)),
+			jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
+			jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created"+b.node.Name)),
+
+			// tests := []ExampleGetAssert{}
+			define("tests").Op("[]").Struct(
+				jen.Id("name").String(),
+				jen.Id("id").Id(b.node.ID.Type.String()),
+				jen.Id("want").Op("*").Qual(b.entityPackage, edge.Type.Name),
+				jen.Id("wantError").Bool(),
+			).Block(
+				jen.Block(
+					jen.Id("name").Op(":").Lit("successful get").Op(","),
+					jen.Id("id").Op(":").Id("created"+b.node.Name).Dot("ID").Op(","),
+					jen.Id("want").Op(":").Id("created").Op(","),
+					jen.Id("wantError").Op(":").False().Op(","),
+				).Op(","),
+				jen.Block(
+					jen.Id("name").Op(":").Lit("not found").Op(","),
+					jen.Id("id").Op(":").Lit(99999).Op(","),
+					jen.Id("want").Op(":").Nil().Op(","),
+					jen.Id("wantError").Op(":").True().Op(","),
+				).Op(","),
+				jen.Block(
+					jen.Id("name").Op(":").Lit("invalid id").Op(","),
+					jen.Id("id").Op(":").Lit(-1).Op(","),
+					jen.Id("want").Op(":").Nil().Op(","),
+					jen.Id("wantError").Op(":").True().Op(","),
+				).Op(","),
+			),
+			// for _, tt := range tests {}
+			jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
+				// t.Run(tt.name, func(t *testing.T)) {}
+				jen.Id("t").Dot("Run").Call(
+					jen.Id("tt").Dot("name"),
+					jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
+						// got, err := repo.Get(ctx, tt.id)
+						define("got", "err").Id("repo").Dot("Get"+text.EntPascal(edge.Name)).Call(jen.Id("ctx"), jen.Id("tt").Dot("id")),
+						jen.If(jen.Id("tt").Dot("wantError")).
+							Block(
+								jen.Qual(pkgTestifyAssert, "Error").Call(jen.Id("t"), jen.Err()),
+								jen.Qual(pkgTestifyAssert, "Nil").Call(jen.Id("t"), jen.Id("got")),
+							).
+							Else().
+							Block(
+								jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Err()),
+								jen.Qual(pkgTestifyAssert, "NotNil").Call(jen.Id("t"), jen.Id("got")),
+								jen.Add(b.assertEqualGetFields(edge.Type)),
+							),
+					),
+				),
+			),
+		),
+		jen.Line(),
+	)
+}
+
+func (b *repositoryUnitTestBuilder) edgeList(edge *gen.Edge, paginator entproto.PaginatorStyle) jen.Code {
+	idValue := map[string]*jen.Statement{strcase.ToSnake(b.node.Name + "_id"): jen.Id("created" + b.node.Name).Dot("ID")}
+	var repoThrough = jen.Line()
+	var createThrough = jen.Line()
+	if edge.Through != nil {
+		repoThrough = define("repoThrough").Id("New" + edge.Through.Name + "Repository").Call(jen.Qual(b.txPackage, "NewRepository").Call(jen.Id("client")))
+		createThrough = segments(
+			define("through").Op("&").Qual(b.ProtoPackage, edge.Through.Name+"Create").Block(
+				jen.Id(text.ProtoPascal(b.node.Name)+"Id").Op(":").Id("created"+b.node.Name).Dot("ID").Op(","),
+				jen.Id(text.ProtoPascal(edge.Type.Name)+"Id").Op(":").Id("v").Dot("ID").Op(","),
+			),
+			assign("_", "err").Id("repoThrough").Dot("Create").Call(jen.Id("ctx"), jen.Id("through")),
+			jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Err()),
+		)
+	}
+	return segments(
+		jen.Func().Id(fmt.Sprintf("Test%s_List%s", b.name, text.EntPascal(edge.Name))).Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
+			b.head(),
+			define("repoRel").Id("New"+edge.Type.Name+"Repository").Call(jen.Qual(b.txPackage, "NewRepository").Call(jen.Id("client"))),
+			repoThrough,
+			jen.Line(),
+
+			// create := &pb.ExampleCreate{}
+			// created, err := repo.Create(ctx, create)
+			// require.NoError(t ,err)
+			// require.NotNil(t, created)
+			define("create"+b.node.Name).Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData(b.node, nil)),
+			define("created"+b.node.Name, "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create"+b.node.Name)),
+			jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Id("err")),
+			jen.Qual(pkgTestifyRequire, "NotNil").Call(jen.Id("t"), jen.Id("created"+b.node.Name)),
+
+			define("testData").Op("[]").Op("*").Qual(b.ProtoPackage, edge.Type.Name+"Create").Block(
+				b.mockData(edge.Type, idValue).Op(","),
+				b.mockData(edge.Type, idValue).Op(","),
+				b.mockData(edge.Type, idValue).Op(","),
+			),
+
+			// created := make([]*entity.Example, 0, len(testData))
+			// for _, created := range testData {}
+			define("created").Make(jen.Index().Op("*").Qual(b.entityPackage, edge.Type.Name), jen.Lit(0), jen.Len(jen.Id("testData"))),
+			jen.For(jen.Id("_").Op(",").Id("rel").Op(":=").Range().Id("testData")).Block(
+				define("v", "err").Id("repoRel").Dot("Create").Call(jen.Id("ctx"), jen.Id("rel")),
+				jen.Qual(pkgTestifyRequire, "NoError").Call(jen.Id("t"), jen.Err()),
+				createThrough,
+				assign("created").Append(jen.Id("created"), jen.Id("v")),
+			),
+			jen.Qual(pkgTestifyAssert, "Len").Call(jen.Id("t"), jen.Id("created"), jen.Len(jen.Id("testData"))),
+
+			// tests := []struct{}{}
+			define("tests").Op("[]").Struct(
+				jen.Id("name").String(),
+				jen.Id("options").Op("*").Qual(b.ProtoPackage, edge.Type.Name+"Options"),
+				jen.Id("paginator").Op("*").Qual(pkgCoconutField, "ClassicalPaginator"), // TODO
+				jen.Id("wantCount").Int(),
+				jen.Id("wantError").Bool(),
+			).Block(b.listTestCases(edge.Type)),
+
+			// for _, tt := range tests {}
+			jen.For(jen.Id("_").Op(",").Id("tt").Op(":=").Range().Id("tests")).Block(
+				jen.Id("t").Dot("Run").Call(jen.Id("tt").Dot("name"), jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
+					define("got", "paginator", "err").Id("repo").Dot("List"+text.EntPascal(edge.Name)).Call(
+						jen.Id("ctx"),
+						jen.Id("created"+b.node.Name).Dot("ID"),
+						jen.Id("tt").Dot("options"),
+						jen.Id("tt").Dot("paginator"),
+					),
+					jen.If(jen.Id("tt").Dot("wantError")).
+						Block(jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Id("err"))).
+						Else().
+						Block(
+							jen.Qual(pkgTestifyAssert, "NoError").Call(jen.Id("t"), jen.Id("err")),
+							jen.Qual(pkgTestifyAssert, "Equal").Call(jen.Id("t"), jen.Id("tt").Dot("wantCount"), jen.Len(jen.Id("got"))),
+							jen.If(jen.Id("tt").Dot("paginator").Op("!=").Nil()).Block(
+								jen.Qual(pkgTestifyAssert, "NotNil").Call(jen.Id("t"), jen.Id("paginator")),
+								jen.Qual(pkgTestifyAssert, "Equal").Call(jen.Id("t"), jen.Int64().Call(jen.Lit(3)), jen.Id("paginator").Dot("Total")),
+							),
+						),
+				)),
+			),
+		),
+		jen.Line(),
+	)
 }
 
 func (b *repositoryUnitTestBuilder) integration() jen.Code {
@@ -565,7 +741,7 @@ func (b *repositoryUnitTestBuilder) integration() jen.Code {
 				jen.Lit("complete CRUD lifecycle"),
 				jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
 					jen.Comment(" Create"),
-					define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()),
+					define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData(b.node, nil)),
 					jen.Line(),
 
 					define("created", "err").Id("repo").Dot("Create").Call(jen.Id("ctx"), jen.Id("create")),
@@ -610,7 +786,7 @@ func (b *repositoryUnitTestBuilder) errorHandling() jen.Code {
 			jen.Id("t").Dot("Run").Call(jen.Lit("context cancellation"), jen.Func().Params(jen.Id("t").Op("*").Qual(pkgTesting, "T")).Block(
 				define("cancelledCtx", "cancel").Qual(pkgContext, "WithCancel").Call(jen.Id("ctx")),
 				jen.Id("cancel").Call().Comment(" Cancel immediately"),
-				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData()),
+				define("create").Op("&").Qual(b.ProtoPackage, b.node.Name+"Create").Add(b.mockData(b.node, nil)),
 				define("_", "err").Id("repo").Dot("Create").Call(jen.Id("cancelledCtx"), jen.Id("create")),
 				jen.Qual(pkgTestifyAssert, "Error").Call(jen.Id("t"), jen.Err()),
 				jen.Qual(pkgTestifyAssert, "ErrorIs").Call(jen.Id("t"), jen.Err(), jen.Qual(pkgContext, "Canceled")),
@@ -648,9 +824,9 @@ func (b *repositoryUnitTestBuilder) allowEmptyCreate() bool {
 	return true
 }
 
-func (b *repositoryUnitTestBuilder) listTestCases() jen.Code {
+func (b *repositoryUnitTestBuilder) listTestCases(node *gen.Type) jen.Code {
 	var options []jen.Code
-	for _, v := range b.node.Fields {
+	for _, v := range node.Fields {
 		if v.Sensitive() {
 			continue
 		}
@@ -705,28 +881,28 @@ func (b *repositoryUnitTestBuilder) listTestCases() jen.Code {
 	return segments(
 		jen.Block(
 			jen.Id("name").Op(":").Lit("list all without pagination").Op(","),
-			jen.Id("options").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Options").Block().Op(","),
+			jen.Id("options").Op(":").Op("&").Qual(b.ProtoPackage, node.Name+"Options").Block().Op(","),
 			jen.Id("paginator").Op(":").Nil().Op(","),
 			jen.Id("wantCount").Op(":").Lit(3).Op(","),
 			jen.Id("wantError").Op(":").False().Op(","),
 		).Op(","),
 		jen.Block(
 			jen.Id("name").Op(":").Lit("list with pagination").Op(","),
-			jen.Id("options").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Options").Block().Op(","),
+			jen.Id("options").Op(":").Op("&").Qual(b.ProtoPackage, node.Name+"Options").Block().Op(","),
 			jen.Id("paginator").Op(":").Op("&").Qual(pkgCoconutField, "ClassicalPaginator").Block(jen.Id("Page").Op(":").Lit(1).Op(",").Id("Limit").Op(":").Lit(2).Op(",")).Op(","),
 			jen.Id("wantCount").Op(":").Lit(2).Op(","),
 			jen.Id("wantError").Op(":").False().Op(","),
 		).Op(","),
 		jen.Block(
 			jen.Id("name").Op(":").Lit("list with pagination page 2").Op(","),
-			jen.Id("options").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Options").Block().Op(","),
+			jen.Id("options").Op(":").Op("&").Qual(b.ProtoPackage, node.Name+"Options").Block().Op(","),
 			jen.Id("paginator").Op(":").Op("&").Qual(pkgCoconutField, "ClassicalPaginator").Block(jen.Id("Page").Op(":").Lit(2).Op(",").Id("Limit").Op(":").Lit(2).Op(",")).Op(","),
 			jen.Id("wantCount").Op(":").Lit(1).Op(","),
 			jen.Id("wantError").Op(":").False().Op(","),
 		).Op(","),
 		jen.Block(
 			jen.Id("name").Op(":").Lit("list with options").Op(","),
-			jen.Id("options").Op(":").Op("&").Qual(b.ProtoPackage, b.node.Name+"Options").Block(options...).Op(","),
+			jen.Id("options").Op(":").Op("&").Qual(b.ProtoPackage, node.Name+"Options").Block(options...).Op(","),
 			jen.Id("paginator").Op(":").Nil().Op(","),
 			jen.Id("wantCount").Op(":").Lit(1).Op(","),
 			jen.Id("wantError").Op(":").False().Op(","),
@@ -734,9 +910,9 @@ func (b *repositoryUnitTestBuilder) listTestCases() jen.Code {
 	)
 }
 
-func (b *repositoryUnitTestBuilder) assertEqualGetFields() jen.Code {
+func (b *repositoryUnitTestBuilder) assertEqualGetFields(node *gen.Type) jen.Code {
 	var fields []jen.Code
-	for _, v := range b.node.Fields {
+	for _, v := range node.Fields {
 		if v.Optional || v.Name == "created_at" || v.Name == "updated_at" || v.Name == "deleted_at" {
 			continue
 		}
@@ -810,25 +986,24 @@ func (b *repositoryUnitTestBuilder) filterFields() {
 
 }
 
-func (b *repositoryUnitTestBuilder) mockData(ptr ...bool) *jen.Statement {
-	fields := b.mockFields(b.node, ptr...)
-	//for _, v := range b.node.Edges {
-	//	if v.Optional {
-	//		continue
-	//	}
-	//	edgeFields := b.mockFields(v.Type, ptr...)
-	//	if len(edgeFields) == 0 {
-	//		continue
-	//	}
-	//	fields = append(
-	//		fields,
-	//		jen.Id(text.ProtoPascal(v.Name)).Op(":").Op("&").Qual(b.ProtoPackage, v.Type.Name+edgeSuffix).Block(edgeFields...).Op(","),
-	//	)
-	//}
+//func (b *repositoryUnitTestBuilder) mockData(values map[string]*jen.Statement, ptr ...bool) *jen.Statement {
+//	fields := b.mockFields(b.node, b.mockValue, ptr...)
+//	return jen.Block(fields...)
+//}
+
+func (b *repositoryUnitTestBuilder) mockData(edgeType *gen.Type, values map[string]*jen.Statement, ptr ...bool) *jen.Statement {
+	fields := b.mockFields(edgeType, func(v *gen.Field, opts *entproto.FieldOptions, withType ...bool) *jen.Statement {
+		if values != nil {
+			if val, ok := values[v.Name]; ok {
+				return val
+			}
+		}
+		return b.mockValue(v, opts, withType...)
+	}, ptr...)
 	return jen.Block(fields...)
 }
 
-func (b *repositoryUnitTestBuilder) mockFields(node *gen.Type, ptr ...bool) []jen.Code {
+func (b *repositoryUnitTestBuilder) mockFields(node *gen.Type, valGen func(v *gen.Field, opts *entproto.FieldOptions, withType ...bool) *jen.Statement, ptr ...bool) []jen.Code {
 	var fields []jen.Code
 	for _, v := range node.Fields {
 		if v.Optional || v.Name == "created_at" || v.Name == "updated_at" || v.Name == "deleted_at" {
@@ -838,7 +1013,7 @@ func (b *repositoryUnitTestBuilder) mockFields(node *gen.Type, ptr ...bool) []je
 		if err != nil {
 			continue
 		}
-		val := b.mockValue(v, &fieldOpts)
+		val := valGen(v, &fieldOpts)
 		if len(ptr) > 0 && ptr[0] && v.Type.Type != field.TypeBytes && !fieldOpts.TypeRepeated {
 			switch v.Type.Type {
 			case field.TypeInt8, field.TypeInt16, field.TypeInt32, field.TypeInt64,
